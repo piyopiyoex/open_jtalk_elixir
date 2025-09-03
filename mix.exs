@@ -1,13 +1,32 @@
 defmodule OpenJtalkElixir.MixProject do
   use Mix.Project
 
+  @version "0.1.0"
+  @source_url "https://github.com/mnishiguchi/open_jtalk_elixir"
+
   def project do
     [
       app: :open_jtalk_elixir,
-      version: "0.1.0",
+      version: @version,
+      description: "Use Open JTalk in Elixir",
       elixir: "~> 1.13",
+      compilers: compilers(Mix.env()),
+      make_targets: ["all"],
+      make_clean: ["clean"],
+      make_env: %{
+        "BUNDLE_ASSETS" => if(System.get_env("MIX_TARGET"), do: "1", else: "0"),
+        "FULL_STATIC" => if(System.get_env("MIX_TARGET"), do: "1", else: "0")
+      },
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      package: package(),
+      docs: docs(),
+      preferred_cli_env: %{
+        credo: :lint,
+        docs: :docs,
+        "hex.publish": :docs,
+        "hex.build": :docs
+      }
     ]
   end
 
@@ -18,11 +37,40 @@ defmodule OpenJtalkElixir.MixProject do
     ]
   end
 
+  defp compilers(:docs), do: Mix.compilers()
+  defp compilers(:lint), do: Mix.compilers()
+  defp compilers(_), do: [:elixir_make | Mix.compilers()]
+
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      # {:dep_from_hexpm, "~> 0.3.0"},
-      # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
+      {:credo, "~> 1.7", only: [:lint], runtime: false},
+      {:elixir_make, "~> 0.7", runtime: false},
+      {:ex_doc, "~> 0.38", only: [:docs], runtime: false}
     ]
+  end
+
+  defp docs do
+    [
+      main: "readme",
+      extras: ["README.md"],
+      source_ref: "v#{@version}",
+      source_url: @source_url
+    ]
+  end
+
+  defp package do
+    %{
+      files: [
+        "lib",
+        "scripts",
+        "Makefile",
+        "mix.exs",
+        "README*",
+        "LICENSE*"
+      ],
+      licenses: ["Apache-2.0"],
+      links: %{"GitHub" => @source_url}
+    }
   end
 end
