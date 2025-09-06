@@ -42,8 +42,40 @@ STACK_PREFIX := $(abspath $(OBJ_DIR)/stack-$(HOST_NORM))
 OJT_PREFIX   := $(abspath $(OBJ_DIR)/open_jtalk-$(HOST_NORM))
 
 # Flags
-EXTRA_CPPFLAGS := -I$(STACK_PREFIX)/include
-EXTRA_LDFLAGS  := -L$(STACK_PREFIX)/lib -Wl,-rpath,'$$ORIGIN/../lib' -Wl,-z,origin
+DEFAULT_CPPFLAGS := -I$(STACK_PREFIX)/include
+EXTRA_CPPFLAGS ?= $(DEFAULT_CPPFLAGS)
+
+# Host OS name (for RPATH flags)
+UNAME_S := $(shell uname -s)
+
+# FULL_STATIC defaults to 1 when MIX_TARGET is set (Nerves), otherwise 0.
+# Users can still override: `make FULL_STATIC=0`.
+FULL_STATIC ?= $(if $(strip $(MIX_TARGET)),1,0)
+
+# Disallow static for *darwin* targets (static linking not supported there).
+ifneq (,$(findstring darwin,$(HOST_NORM)))
+  ifeq ($(FULL_STATIC),1)
+    $(error FULL_STATIC=1 is not supported for darwin targets)
+  endif
+endif
+
+ifeq ($(UNAME_S),Darwin)
+  # macOS uses @loader_path for rpath
+  RPATH_FLAGS = -Wl,-rpath,@loader_path/../lib
+else
+  # Linux/BSD: $ORIGIN + mark origin
+  RPATH_FLAGS = -Wl,-rpath,'$$ORIGIN/../lib' -Wl,-z,origin
+endif
+
+ifeq ($(FULL_STATIC),1)
+  DEFAULT_LDFLAGS := -L$(STACK_PREFIX)/lib -static -static-libgcc -static-libstdc++
+else
+  DEFAULT_LDFLAGS := -L$(STACK_PREFIX)/lib $(RPATH_FLAGS)
+endif
+EXTRA_LDFLAGS ?= $(DEFAULT_LDFLAGS)
+
+# Whether to bundle dictionary/voices into priv/ (1=yes, 0=no)
+BUNDLE_ASSETS ?= 1
 
 # config.sub: repo-local > automake > system
 ifeq ($(wildcard $(CURDIR)/config.sub),)
@@ -59,7 +91,11 @@ OJT_CFG_STAMP := $(OBJ_DIR)/.ojt_configured-$(HOST_NORM)
 
 # Targets
 .PHONY: all ensure_vendor clean distclean dic voice
+ifeq ($(BUNDLE_ASSETS),1)
 all: $(PRIV_DIR)/bin/open_jtalk $(PRIV_DIR)/dic/sys.dic $(PRIV_DIR)/voices/mei_normal.htsvoice
+else
+all: $(PRIV_DIR)/bin/open_jtalk
+endif
 
 dic:   $(PRIV_DIR)/dic/sys.dic
 voice: $(PRIV_DIR)/voices/mei_normal.htsvoice
