@@ -122,13 +122,16 @@ defmodule OpenJTalk.Assets do
   end
 
   defp find_system_naist_jdic() do
-    [
-      "/var/lib/mecab/dic/open-jtalk/naist-jdic",
-      "/usr/lib/x86_64-linux-gnu/mecab/dic/open-jtalk/naist-jdic",
-      "/usr/lib/aarch64-linux-gnu/mecab/dic/open-jtalk/naist-jdic",
-      "/usr/local/lib/mecab/dic/open-jtalk/naist-jdic",
-      "/usr/lib/mecab/dic/open-jtalk/naist-jdic"
-    ]
+    brew = System.get_env("HOMEBREW_PREFIX") || "/usr/local"
+
+    ([
+       "/var/lib/mecab/dic/open-jtalk/naist-jdic",
+       "/usr/lib/x86_64-linux-gnu/mecab/dic/open-jtalk/naist-jdic",
+       "/usr/lib/aarch64-linux-gnu/mecab/dic/open-jtalk/naist-jdic",
+       "/usr/local/lib/mecab/dic/open-jtalk/naist-jdic",
+       "/usr/lib/mecab/dic/open-jtalk/naist-jdic",
+       Path.join(brew, "share/open_jtalk/open_jtalk_dic_utf_8-1.11")
+     ] ++ Path.wildcard(Path.join(brew, "Cellar/open-jtalk/*/dic/open_jtalk_dic_utf_8-1.11")))
     |> Enum.find(&File.exists?(Path.join(&1, "sys.dic")))
   end
 
@@ -139,12 +142,14 @@ defmodule OpenJTalk.Assets do
   end
 
   defp find_system_voice() do
+    brew = System.get_env("HOMEBREW_PREFIX") || "/usr/local"
+
     [
-      "/usr/share/hts-voice/nitech-jp-atr503-m001/nitech_jp_atr503_m001.htsvoice",
-      "/usr/local/share/hts-voice/nitech-jp-atr503-m001/nitech_jp_atr503_m001.htsvoice",
-      "/usr/share/hts-voice/mei/mei_normal.htsvoice",
-      "/usr/local/share/hts-voice/mei/mei_normal.htsvoice"
+      "/usr/share/hts-voice/**/*.htsvoice",
+      "/usr/local/share/hts-voice/**/*.htsvoice",
+      Path.join(brew, "share/hts-voice/**/*.htsvoice")
     ]
-    |> Enum.find(&File.exists?/1)
+    |> Enum.flat_map(&Path.wildcard/1)
+    |> List.first()
   end
 end
