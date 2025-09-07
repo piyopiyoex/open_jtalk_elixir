@@ -89,8 +89,12 @@ endif
 
 OJT_CFG_STAMP := $(OBJ_DIR)/.ojt_configured-$(HOST_NORM)
 
+# ------------------------------------------------------------------------------
 # Targets
-.PHONY: all ensure_vendor clean distclean dic voice
+# ------------------------------------------------------------------------------
+
+.PHONY: all dic voice ensure_src ensure_assets clean distclean
+
 ifeq ($(BUNDLE_ASSETS),1)
 all: $(PRIV_DIR)/bin/open_jtalk $(PRIV_DIR)/dic/sys.dic $(PRIV_DIR)/voices/mei_normal.htsvoice
 else
@@ -100,29 +104,34 @@ endif
 dic:   $(PRIV_DIR)/dic/sys.dic
 voice: $(PRIV_DIR)/voices/mei_normal.htsvoice
 
-# Fetch (idempotent)
-ifeq ($(OPENJTALK_SKIP_FETCH),1)
-ensure_vendor:
-	@echo "Skipping vendor fetch (OPENJTALK_SKIP_FETCH=1)"
+# Fetchers (idempotent)
+# Always fetch small C sources needed to build the CLI
+ensure_src:
+	+@ROOT_DIR="$(CURDIR)" /usr/bin/env bash "$(SCRIPT_DIR)/fetch_sources.sh" src
+
+# Only fetch heavy assets when bundling is requested
+ifeq ($(BUNDLE_ASSETS),1)
+ensure_assets:
+	+@ROOT_DIR="$(CURDIR)" /usr/bin/env bash "$(SCRIPT_DIR)/fetch_sources.sh" assets
 else
-ensure_vendor:
-	+@ROOT_DIR="$(CURDIR)" /usr/bin/env bash "$(SCRIPT_DIR)/fetch_sources.sh"
+ensure_assets:
+	@echo "Skipping asset download (BUNDLE_ASSETS=0)"
 endif
 
 # MeCab (static)
-$(STACK_PREFIX)/lib/libmecab.a: | ensure_vendor $(STACK_PREFIX)
+$(STACK_PREFIX)/lib/libmecab.a: | ensure_src $(STACK_PREFIX)
 	+@SRC_DIR="$(MECAB_SRC)" PREFIX="$(STACK_PREFIX)" HOST="$(HOST_NORM)" \
 	  CC="$(CC)" CXX="$(CXX)" AR="$(AR)" RANLIB="$(RANLIB)" CONFIG_SUB="$(CONFIG_SUB)" \
 	  /usr/bin/env bash "$(SCRIPT_DIR)/build_mecab.sh"
 
 # HTS Engine (static)
-$(STACK_PREFIX)/lib/libHTSEngine.a: | ensure_vendor $(STACK_PREFIX)
+$(STACK_PREFIX)/lib/libHTSEngine.a: | ensure_src $(STACK_PREFIX)
 	+@SRC_DIR="$(HTS_SRC)" PREFIX="$(STACK_PREFIX)" HOST="$(HOST_NORM)" \
 	  CC="$(CC)" CXX="$(CXX)" AR="$(AR)" RANLIB="$(RANLIB)" CONFIG_SUB="$(CONFIG_SUB)" \
 	  /usr/bin/env bash "$(SCRIPT_DIR)/build_hts_engine.sh"
 
 # Open JTalk configure
-$(OJT_CFG_STAMP): $(STACK_PREFIX)/lib/libmecab.a $(STACK_PREFIX)/lib/libHTSEngine.a | ensure_vendor $(OBJ_DIR) $(PRIV_DIR)/bin $(PRIV_DIR)/lib
+$(OJT_CFG_STAMP): $(STACK_PREFIX)/lib/libmecab.a $(STACK_PREFIX)/lib/libHTSEngine.a | ensure_src $(OBJ_DIR) $(PRIV_DIR)/bin $(PRIV_DIR)/lib
 	+@OJT_DIR=$$( [ -d "$(OJT1)" ] && echo "$(OJT1)" || echo "$(OJT2)" ); \
 	  OJT_DIR="$$OJT_DIR" HOST="$(HOST_NORM)" STACK_PREFIX="$(STACK_PREFIX)" OJT_PREFIX="$(OJT_PREFIX)" \
 	  CC="$(CC)" CXX="$(CXX)" AR="$(AR)" RANLIB="$(RANLIB)" \
@@ -139,11 +148,11 @@ $(PRIV_DIR)/bin/open_jtalk: $(OJT_CFG_STAMP) | $(PRIV_DIR)/bin
 	  /usr/bin/env bash "$(SCRIPT_DIR)/ojt_build.sh"
 
 # Dictionary & Voice
-$(PRIV_DIR)/dic/sys.dic: | ensure_vendor $(PRIV_DIR)/dic
+$(PRIV_DIR)/dic/sys.dic: | ensure_assets $(PRIV_DIR)/dic
 	+@DIC_TGZ="$(DIC_TGZ)" DEST_DIR="$(PRIV_DIR)/dic" \
 	  /usr/bin/env bash "$(SCRIPT_DIR)/install_dic.sh"
 
-$(PRIV_DIR)/voices/mei_normal.htsvoice: | ensure_vendor $(PRIV_DIR)/voices
+$(PRIV_DIR)/voices/mei_normal.htsvoice: | ensure_assets $(PRIV_DIR)/voices
 	+@VOICE_ZIP="$(MEI_ZIP)" DEST_VOICE="$(PRIV_DIR)/voices/mei_normal.htsvoice" \
 	  /usr/bin/env bash "$(SCRIPT_DIR)/install_voice.sh"
 
