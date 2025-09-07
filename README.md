@@ -175,15 +175,6 @@ override them by exporting `BUNDLE_ASSETS` or `FULL_STATIC` before `mix compile`
 > Note: fully static linking is unsupported on macOS host triplets; this is
 > only relevant for cross-compile targets that try to produce macOS artifacts.
 
-## Testing
-
-```bash
-mix test
-
-# run audio playback test if you have an audio player available
-mix test --include audio
-```
-
 ## Troubleshooting
 
 - `{:error, {:binary_missing, _}}` — `open_jtalk` binary not found/built.
