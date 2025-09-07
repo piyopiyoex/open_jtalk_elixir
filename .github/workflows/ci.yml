@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: '1.18'
+          otp-version: '27'
+      - name: Mix cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.mix
+            deps
+            _build
+          key: mix-${{ runner.os }}-${{ hashFiles('**/mix.lock') }}
+      - run: mix local.hex --force
+      - run: mix local.rebar --force
+      - run: mix deps.get
+      - run: mix format --check-formatted
+
+  test-linux:
+    runs-on: ubuntu-latest
+    env:
+      MIX_ENV: test
+      # Bundle assets so tests have dic/voice; but avoid static linking on CI
+      BUNDLE_ASSETS: "1"
+      FULL_STATIC: "0"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential curl tar unzip automake
+
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: '1.18'
+          otp-version: '27'
+
+      - name: Cache mix
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.mix
+            deps
+            _build
+          key: mix-${{ runner.os }}-${{ hashFiles('**/mix.lock') }}
+
+      - name: Cache vendor downloads
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: vendor-${{ runner.os }}-openjtalk-${{ hashFiles('VENDOR') }}
+
+      - run: mix local.hex --force
+      - run: mix local.rebar --force
+      - run: mix deps.get
+
+      # Make sure the Makefile sees our env; mix.exs also passes make_env
+      - name: Compile
+        run: mix compile
+
+      - name: Run tests (audio tests are excluded by default)
+        run: mix test
+
