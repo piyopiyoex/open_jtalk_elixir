@@ -1,5 +1,8 @@
 # open_jtalk_elixir
 
+[![Hex version](https://img.shields.io/hexpm/v/open_jtalk_elixir.svg "Hex version")](https://hex.pm/packages/open_jtalk_elixir)
+[![CI](https://github.com/mnishiguchi/open_jtalk_elixir/actions/workflows/ci.yml/badge.svg)](https://github.com/mnishiguchi/open_jtalk_elixir/actions/workflows/ci.yml)
+
 <!-- MODULEDOC -->
 
 Use Open JTalk from Elixir. This package builds a local `open_jtalk` CLI (and
