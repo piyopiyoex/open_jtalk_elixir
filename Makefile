@@ -74,8 +74,9 @@ else
 endif
 EXTRA_LDFLAGS ?= $(DEFAULT_LDFLAGS)
 
-# Whether to bundle dictionary/voices into priv/ (1=yes, 0=no)
-BUNDLE_ASSETS ?= 1
+# Whether to bundle dictionary/voices into priv/ (1=yes, 0=no).
+# Keep default off for releases so we’re not redistributing third-party data.
+BUNDLE_ASSETS ?= 0
 
 # config.sub: repo-local > automake > system
 ifeq ($(wildcard $(CURDIR)/config.sub),)

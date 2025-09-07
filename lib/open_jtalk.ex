@@ -1,22 +1,7 @@
 defmodule OpenJTalk do
-  @moduledoc """
-  A lightweight Elixir wrapper around the `open_jtalk` CLI for Japanese text-to-speech.
-
-  ### Options
-
-  * `:timbre` – voice color offset, `-0.8..0.8` (default `0.0`)
-  * `:pitch_shift` – semitones, `-24..24` (default `0`)
-  * `:rate` – speaking speed, `0.5..2.0` (default `1.0`)
-  * `:gain` – output gain (dB), default `0`
-  * `:voice` – path to a `.htsvoice` file (optional)
-  * `:dictionary` – path to a directory containing `sys.dic` (optional)
-  * `:timeout` – max runtime in ms (optional)
-
-  Example:
-
-      iex> OpenJTalk.to_wav("こんにちは", rate: 1.2, pitch_shift: 3)
-      {:ok, "/tmp/ojt-1234.wav"}
-  """
+  @moduledoc File.read!("README.md")
+             |> String.split("<!-- MODULEDOC -->")
+             |> Enum.fetch!(1)
 
   alias OpenJTalk.{Assets, Runner}
 
