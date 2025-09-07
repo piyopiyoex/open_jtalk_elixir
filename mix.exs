@@ -71,11 +71,21 @@ defmodule OpenJtalkElixir.MixProject do
         "scripts",
         "Makefile",
         "mix.exs",
+        "CHANGELOG*",
         "README*",
         "LICENSE*"
       ],
       licenses: ["Apache-2.0"],
-      links: %{"GitHub" => @source_url}
+      links: %{
+        "GitHub" => @source_url,
+        "Open JTalk" => "http://open-jtalk.sourceforge.net/",
+        "HTS Engine API" => "http://hts-engine.sourceforge.net/",
+        "MeCab" => "https://taku910.github.io/mecab/",
+        "Open JTalk Dictionary (NAIST-JDIC UTF-8)" =>
+          "https://sourceforge.net/projects/open-jtalk/files/Dictionary/",
+        "MMDAgent Example (Mei voice)" =>
+          "https://sourceforge.net/projects/mmdagent/files/MMDAgent_Example/"
+      }
     }
   end
 end

@@ -1,5 +1,8 @@
 # open_jtalk_elixir
 
+[![Hex version](https://img.shields.io/hexpm/v/open_jtalk_elixir.svg "Hex version")](https://hex.pm/packages/open_jtalk_elixir)
+[![CI](https://github.com/mnishiguchi/open_jtalk_elixir/actions/workflows/ci.yml/badge.svg)](https://github.com/mnishiguchi/open_jtalk_elixir/actions/workflows/ci.yml)
+
 <!-- MODULEDOC -->
 
 Use Open JTalk from Elixir. This package builds a local `open_jtalk` CLI (and
@@ -46,14 +49,8 @@ Optional environment flags (honored by the Makefile):
 ## Quick start
 
 ```elixir
-# write a wav to disk
-{:ok, path} = OpenJTalk.to_wav("こんにちは", rate: 1.2, pitch_shift: 3)
-
-# get wav bytes
-{:ok, wav} = OpenJTalk.to_binary("テストです")
-
 # play via system audio player (aplay/paplay/afplay/play)
-:ok = OpenJTalk.say("おはようございます")
+OpenJTalk.say("元氣でっすか、元氣があればなんでもできる")
 ```
 
 ### Options
