@@ -34,7 +34,7 @@ mix compile
 
 On first compile the project may download and build MeCab, HTS Engine API,
 and Open JTalk. You can optionally bundle a UTF-8 dictionary and a Mei voice
-into `priv/` (see `BUNDLE_ASSETS` below).
+into `priv/` (see `OPENJTALK_BUNDLE_ASSETS` below).
 
 ### Build requirements
 
@@ -43,8 +43,8 @@ On macOS Xcode Command Line Tools are sufficient.
 
 Optional environment flags (honored by the Makefile):
 
-- `FULL_STATIC=1` — attempt a fully static `open_jtalk` (Linux only; requires static libstdc++)
-- `BUNDLE_ASSETS=0|1` — whether to bundle dictionary/voice into `priv/`
+- `OPENJTALK_FULL_STATIC=1` — attempt a fully static `open_jtalk` (Linux only; requires static libstdc++)
+- `OPENJTALK_BUNDLE_ASSETS=0|1` — whether to bundle dictionary/voice into `priv/`
 
 ## Quick start
 
@@ -106,8 +106,8 @@ cached paths:
 
 This library is Nerves-aware. When `MIX_TARGET` is set the build defaults to:
 
-- `FULL_STATIC=1` — try to statically link the CLI on Linux targets when possible
-- `BUNDLE_ASSETS=1` — bundle CLI, dictionary, and voice into `priv/`
+- `OPENJTALK_FULL_STATIC=1` — try to statically link the CLI on Linux targets when possible
+- `OPENJTALK_BUNDLE_ASSETS=1` — bundle CLI, dictionary, and voice into `priv/`
 
 So for many projects no extra configuration is needed.
 
@@ -150,7 +150,7 @@ If that’s too large you can avoid bundling at compile time and provision asset
 separately (rootfs overlay, `/data`, OTA, etc.):
 
 ```bash
-MIX_TARGET=rpi4 BUNDLE_ASSETS=0 mix deps.compile open_jtalk_elixir
+MIX_TARGET=rpi4 OPENJTALK_BUNDLE_ASSETS=0 mix deps.compile open_jtalk_elixir
 ```
 
 Then point the library to the provisioned assets (for example in
@@ -170,7 +170,7 @@ library.
 ### Overriding the defaults
 
 For Nerves builds this project uses the build defaults above, but you can
-override them by exporting `BUNDLE_ASSETS` or `FULL_STATIC` before `mix compile`.
+override them by exporting `OPENJTALK_BUNDLE_ASSETS` or `OPENJTALK_FULL_STATIC` before `mix compile`.
 
 > Note: fully static linking is unsupported on macOS host triplets; this is
 > only relevant for cross-compile targets that try to produce macOS artifacts.

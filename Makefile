@@ -48,14 +48,14 @@ EXTRA_CPPFLAGS ?= $(DEFAULT_CPPFLAGS)
 # Host OS name (for RPATH flags)
 UNAME_S := $(shell uname -s)
 
-# FULL_STATIC defaults to 1 when MIX_TARGET is set (Nerves), otherwise 0.
-# Users can still override: `make FULL_STATIC=0`.
-FULL_STATIC ?= $(if $(strip $(MIX_TARGET)),1,0)
+# OPENJTALK_FULL_STATIC defaults to 1 when MIX_TARGET is set (Nerves), otherwise 0.
+# Users can still override: `make OPENJTALK_FULL_STATIC=0`.
+OPENJTALK_FULL_STATIC ?= $(if $(strip $(MIX_TARGET)),1,0)
 
 # Disallow static for *darwin* targets (static linking not supported there).
 ifneq (,$(findstring darwin,$(HOST_NORM)))
-  ifeq ($(FULL_STATIC),1)
-    $(error FULL_STATIC=1 is not supported for darwin targets)
+  ifeq ($(OPENJTALK_FULL_STATIC),1)
+    $(error OPENJTALK_FULL_STATIC=1 is not supported for darwin targets)
   endif
 endif
 
@@ -67,7 +67,7 @@ else
   RPATH_FLAGS = -Wl,-rpath,'$$ORIGIN/../lib' -Wl,-z,origin
 endif
 
-ifeq ($(FULL_STATIC),1)
+ifeq ($(OPENJTALK_FULL_STATIC),1)
   DEFAULT_LDFLAGS := -L$(STACK_PREFIX)/lib -static -static-libgcc -static-libstdc++
 else
   DEFAULT_LDFLAGS := -L$(STACK_PREFIX)/lib $(RPATH_FLAGS)
@@ -76,7 +76,7 @@ EXTRA_LDFLAGS ?= $(DEFAULT_LDFLAGS)
 
 # Whether to bundle dictionary/voices into priv/ (1=yes, 0=no).
 # Keep default off for releases so we’re not redistributing third-party data.
-BUNDLE_ASSETS ?= 0
+OPENJTALK_BUNDLE_ASSETS ?= 0
 
 # config.sub: repo-local > automake > system
 ifeq ($(wildcard $(CURDIR)/config.sub),)
@@ -96,7 +96,7 @@ OJT_CFG_STAMP := $(OBJ_DIR)/.ojt_configured-$(HOST_NORM)
 
 .PHONY: all dic voice ensure_src ensure_assets clean distclean
 
-ifeq ($(BUNDLE_ASSETS),1)
+ifeq ($(OPENJTALK_BUNDLE_ASSETS),1)
 all: $(PRIV_DIR)/bin/open_jtalk $(PRIV_DIR)/dic/sys.dic $(PRIV_DIR)/voices/mei_normal.htsvoice
 else
 all: $(PRIV_DIR)/bin/open_jtalk
@@ -111,12 +111,12 @@ ensure_src:
 	+@ROOT_DIR="$(CURDIR)" /usr/bin/env bash "$(SCRIPT_DIR)/fetch_sources.sh" src
 
 # Only fetch heavy assets when bundling is requested
-ifeq ($(BUNDLE_ASSETS),1)
+ifeq ($(OPENJTALK_BUNDLE_ASSETS),1)
 ensure_assets:
 	+@ROOT_DIR="$(CURDIR)" /usr/bin/env bash "$(SCRIPT_DIR)/fetch_sources.sh" assets
 else
 ensure_assets:
-	@echo "Skipping asset download (BUNDLE_ASSETS=0)"
+	@echo "Skipping asset download (OPENJTALK_BUNDLE_ASSETS=0)"
 endif
 
 # MeCab (static)

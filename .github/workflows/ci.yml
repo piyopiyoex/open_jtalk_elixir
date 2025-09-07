@@ -37,8 +37,8 @@ jobs:
     env:
       MIX_ENV: test
       # Bundle assets so tests have dic/voice; but avoid static linking on CI
-      BUNDLE_ASSETS: "1"
-      FULL_STATIC: "0"
+      OPENJTALK_BUNDLE_ASSETS: "1"
+      OPENJTALK_FULL_STATIC: "0"
     steps:
       - uses: actions/checkout@v4
 

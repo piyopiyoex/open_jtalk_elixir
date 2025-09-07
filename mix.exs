@@ -15,11 +15,11 @@ defmodule OpenJtalkElixir.MixProject do
       make_clean: ["clean"],
       make_env: %{
         # Respect explicit CI/local settings first, then default by MIX_TARGET
-        "BUNDLE_ASSETS" =>
-          System.get_env("BUNDLE_ASSETS") ||
+        "OPENJTALK_BUNDLE_ASSETS" =>
+          System.get_env("OPENJTALK_BUNDLE_ASSETS") ||
             if(System.get_env("MIX_TARGET"), do: "1", else: "0"),
-        "FULL_STATIC" =>
-          System.get_env("FULL_STATIC") ||
+        "OPENJTALK_FULL_STATIC" =>
+          System.get_env("OPENJTALK_FULL_STATIC") ||
             if(System.get_env("MIX_TARGET"), do: "1", else: "0")
       },
       start_permanent: Mix.env() == :prod,
