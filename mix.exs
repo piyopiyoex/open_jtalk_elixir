@@ -71,6 +71,7 @@ defmodule OpenJtalkElixir.MixProject do
         "scripts",
         "Makefile",
         "mix.exs",
+        "CHANGELOG*",
         "README*",
         "LICENSE*"
       ],
