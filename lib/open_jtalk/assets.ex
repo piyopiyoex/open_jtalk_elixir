@@ -1,13 +1,27 @@
 defmodule OpenJTalk.Assets do
-  @moduledoc false
-  # Internal helpers for resolving the CLI, dictionary, and voice paths.
-  # Recognizes OPENJTALK_CLI, OPENJTALK_DIC_DIR, and OPENJTALK_VOICE.
+  @moduledoc """
+  Resolve paths to the `open_jtalk` binary, dictionary (`sys.dic`), and voice
+  (`.htsvoice`) at runtime.
 
-  @priv_bin Application.app_dir(:open_jtalk_elixir, "priv/bin/open_jtalk")
-  @priv_dic_root Application.app_dir(:open_jtalk_elixir, "priv/dic")
-  @priv_voice_dir Application.app_dir(:open_jtalk_elixir, "priv/voices")
+  Resolution order for each asset:
 
-  # Cache results to avoid repeated filesystem scans
+    1. Environment variables (`OPENJTALK_CLI`, `OPENJTALK_DIC_DIR`, `OPENJTALK_VOICE`)
+    2. Files bundled under this app’s `priv/` directory
+    3. Common system locations (Homebrew, `/usr/*`, etc.)
+
+  Results are cached in `:persistent_term`. Call `reset_cache/0` if your
+  environment changes at runtime (e.g., you replace files or tweak env vars).
+  """
+
+  # Resolve priv paths at runtime (don’t bake build-host paths into the BEAM)
+  defp priv_bin, do: Application.app_dir(:open_jtalk_elixir, "priv/bin/open_jtalk")
+  defp priv_dic_root, do: Application.app_dir(:open_jtalk_elixir, "priv/dic")
+  defp priv_voice_dir, do: Application.app_dir(:open_jtalk_elixir, "priv/voices")
+
+  @doc """
+  Resolve the `open_jtalk` CLI path.
+  """
+  @spec resolve_bin() :: {:ok, Path.t()} | {:error, term()}
   def resolve_bin() do
     case :persistent_term.get({__MODULE__, :bin}, :unknown) do
       :unknown ->
@@ -16,20 +30,27 @@ defmodule OpenJTalk.Assets do
         path =
           cond do
             is_binary(env) and File.exists?(env) -> env
-            File.exists?(@priv_bin) -> @priv_bin
+            File.exists?(priv_bin()) -> priv_bin()
             path = System.find_executable("open_jtalk") -> path
             true -> nil
           end
 
         if path,
           do: put(:bin, path),
-          else: {:error, {:binary_missing, [@priv_bin, "$PATH:open_jtalk"]}}
+          else: {:error, {:binary_missing, [priv_bin(), "$PATH:open_jtalk"]}}
 
       path when is_binary(path) ->
         {:ok, path}
     end
   end
 
+  @doc """
+  Resolve the dictionary directory that contains `sys.dic`.
+
+  If `path` is `nil`, consult env (`OPENJTALK_DIC_DIR`), then `priv/`, then
+  system locations. If a `path` is provided, it must contain `sys.dic`.
+  """
+  @spec resolve_dictionary(nil | Path.t()) :: {:ok, Path.t()} | {:error, term()}
   def resolve_dictionary(nil) do
     # Allow OPENJTALK_DIC_DIR or priv/dic/** with sys.dic
     case :persistent_term.get({__MODULE__, :dic}, :unknown) do
@@ -39,12 +60,12 @@ defmodule OpenJTalk.Assets do
         dic =
           cond do
             is_binary(env) and File.exists?(Path.join(env, "sys.dic")) -> env
-            path = find_sysdic_under(@priv_dic_root) -> path
+            path = find_sysdic_under(priv_dic_root()) -> path
             path = find_system_naist_jdic() -> path
             true -> nil
           end
 
-        if dic, do: put(:dic, dic), else: {:error, {:dictionary_missing, @priv_dic_root}}
+        if dic, do: put(:dic, dic), else: {:error, {:dictionary_missing, priv_dic_root()}}
 
       path when is_binary(path) ->
         {:ok, path}
@@ -57,6 +78,13 @@ defmodule OpenJTalk.Assets do
       else: {:error, {:dictionary_missing, path}}
   end
 
+  @doc """
+  Resolve a `.htsvoice` file.
+
+  If `path` is `nil`, consult env (`OPENJTALK_VOICE`), then `priv/`, then
+  system locations.
+  """
+  @spec resolve_voice(nil | Path.t()) :: {:ok, Path.t()} | {:error, term()}
   def resolve_voice(nil) do
     case :persistent_term.get({__MODULE__, :voice}, :unknown) do
       :unknown ->
@@ -65,12 +93,12 @@ defmodule OpenJTalk.Assets do
         voice =
           cond do
             is_binary(env) and File.exists?(env) -> env
-            path = pick_first_htsvoice(@priv_voice_dir) -> path
+            path = pick_first_htsvoice(priv_voice_dir()) -> path
             path = find_system_voice() -> path
             true -> nil
           end
 
-        if voice, do: put(:voice, voice), else: {:error, {:voice_missing, @priv_voice_dir}}
+        if voice, do: put(:voice, voice), else: {:error, {:voice_missing, priv_voice_dir()}}
 
       path when is_binary(path) ->
         {:ok, path}
@@ -81,6 +109,10 @@ defmodule OpenJTalk.Assets do
     if File.exists?(path), do: {:ok, path}, else: {:error, {:voice_missing, path}}
   end
 
+  @doc """
+  Clear cached paths so future `resolve_*` calls re-scan the filesystem/env.
+  """
+  @spec reset_cache() :: :ok
   def reset_cache() do
     for k <- [:bin, :dic, :voice], do: :persistent_term.erase({__MODULE__, k})
     :ok
