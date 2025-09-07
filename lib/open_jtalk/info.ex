@@ -24,28 +24,31 @@ defmodule OpenJTalk.Info do
   """
   @spec info() :: {:ok, info_map()} | {:error, term}
   def info() do
-    with {:ok, bin} <- Assets.resolve_bin(),
-         {:ok, dic} <- Assets.resolve_dictionary(nil),
-         {:ok, voice} <- Assets.resolve_voice(nil) do
-      {:ok,
-       %{
-         bin: %{
-           path: bin,
-           source: classify_source(:bin, bin)
-         },
-         dictionary: %{
-           path: dic,
-           source: classify_source(:dic, dic)
-         },
-         voice: %{
-           path: voice,
-           source: classify_source(:voice, voice)
-         },
-         audio_player: Player.info()
-       }}
-    else
-      {:error, _} = e -> e
-    end
+    bin_entry =
+      case Assets.resolve_bin() do
+        {:ok, bin} -> %{path: bin, source: classify_source(:bin, bin)}
+        {:error, _} -> %{path: nil, source: :none}
+      end
+
+    dic_entry =
+      case Assets.resolve_dictionary(nil) do
+        {:ok, dic} -> %{path: dic, source: classify_source(:dic, dic)}
+        {:error, _} -> %{path: nil, source: :none}
+      end
+
+    voice_entry =
+      case Assets.resolve_voice(nil) do
+        {:ok, voice} -> %{path: voice, source: classify_source(:voice, voice)}
+        {:error, _} -> %{path: nil, source: :none}
+      end
+
+    {:ok,
+     %{
+       bin: bin_entry,
+       dictionary: dic_entry,
+       voice: voice_entry,
+       audio_player: Player.info()
+     }}
   end
 
   defp classify_source(:bin, path) do
