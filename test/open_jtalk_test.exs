@@ -2,7 +2,7 @@ defmodule OpenJTalkTest do
   use ExUnit.Case, async: true
 
   @tag :tmp_dir
-  test "to_wav writes a wav", %{tmp_dir: tmp_dir}  do
+  test "to_wav writes a wav", %{tmp_dir: tmp_dir} do
     out = Path.join(tmp_dir, "ojt_#{System.unique_integer([:positive])}.wav")
     assert {:ok, ^out} = OpenJTalk.to_wav("テストです。", out: out)
     assert File.exists?(out)

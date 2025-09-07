@@ -80,13 +80,18 @@ defmodule OpenJTalk do
   """
   @spec to_binary(binary, opts) :: {:ok, binary} | {:error, term}
   def to_binary(text, opts \\ []) when is_binary(text) do
-    with {:ok, args} <- args_for("/dev/stdout", opts),
-         {:ok, txt, cleanup} <- Runner.write_tmp_text(text) do
-      try do
-        Runner.run_capture(args ++ [txt], opts[:timeout])
-      after
-        cleanup.()
+    tmp = Path.join(System.tmp_dir!(), "ojt-#{System.unique_integer([:positive])}.wav")
+
+    try do
+      with {:ok, _path} <- to_wav(text, Keyword.put(opts, :out, tmp)),
+           {:ok, bin} <- File.read(tmp) do
+        {:ok, bin}
+      else
+        {:error, _} = e -> e
       end
+    after
+      # Best-effort cleanup; ignore errors
+      File.rm(tmp)
     end
   end
 
