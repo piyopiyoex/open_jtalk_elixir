@@ -79,7 +79,6 @@ EXTRA_LDFLAGS ?= $(DEFAULT_LDFLAGS)
 OPENJTALK_BUNDLE_ASSETS ?= 0
 
 # config.sub: prefer env CONFIG_SUB -> repo-local -> vendor -> automake -> system
-# If CI provides CONFIG_SUB env (full path) that file will be used.
 ifneq ($(wildcard $(CONFIG_SUB)),)
   CONFIG_SUB := $(CONFIG_SUB)
 else ifneq ($(wildcard $(CURDIR)/config.sub),)
@@ -92,8 +91,6 @@ else
     CONFIG_SUB := /usr/share/misc/config.sub
   endif
 endif
-
-OJT_CFG_STAMP := $(OBJ_DIR)/.ojt_configured-$(HOST_NORM)
 
 # ------------------------------------------------------------------------------
 # Targets
@@ -110,11 +107,9 @@ dic:   $(PRIV_DIR)/dic/sys.dic
 voice: $(PRIV_DIR)/voices/mei_normal.htsvoice
 
 # Fetchers (idempotent)
-# Always fetch small C sources needed to build the CLI
 ensure_src:
 	+@ROOT_DIR="$(CURDIR)" /usr/bin/env bash "$(SCRIPT_DIR)/fetch_sources.sh" src
 
-# Only fetch heavy assets when bundling is requested
 ifeq ($(OPENJTALK_BUNDLE_ASSETS),1)
 ensure_assets:
 	+@ROOT_DIR="$(CURDIR)" /usr/bin/env bash "$(SCRIPT_DIR)/fetch_sources.sh" assets
@@ -123,14 +118,11 @@ ensure_assets:
 	@echo "Skipping asset download (OPENJTALK_BUNDLE_ASSETS=0)"
 endif
 
-# Optional helper for debugging which config.sub was chosen
 show-config-sub:
 	@printf "CONFIG_SUB = %s\n" "$(CONFIG_SUB)"
 
-# Build stack (MeCab + HTS) and Open JTalk configure/build via wrapper script
-# This wrapper will build MeCab/HTS (if missing), copy config.sub, configure OJT,
-# and build/install the open_jtalk binary to $(PRIV_DIR)/bin/open_jtalk.
-$(OJT_CFG_STAMP): | ensure_src $(OBJ_DIR) $(PRIV_DIR)/bin $(PRIV_DIR)/lib
+# Build stack and open_jtalk directly (no stamp)
+$(PRIV_DIR)/bin/open_jtalk: | ensure_src $(OBJ_DIR) $(PRIV_DIR)/bin $(PRIV_DIR)/lib
 	+@OJT_DIR=$$( [ -d "$(OJT1)" ] && echo "$(OJT1)" || echo "$(OJT2)" ); \
 	  echo "Building stack and Open JTalk (OJT_DIR=$$OJT_DIR)"; \
 	  MECAB_SRC="$(MECAB_SRC)" HTS_SRC="$(HTS_SRC)" OJT_DIR="$$OJT_DIR" \
@@ -138,15 +130,7 @@ $(OJT_CFG_STAMP): | ensure_src $(OBJ_DIR) $(PRIV_DIR)/bin $(PRIV_DIR)/lib
 	  CC="$(CC)" CXX="$(CXX)" AR="$(AR)" RANLIB="$(RANLIB)" STRIP_BIN="$(STRIP)" \
 	  CONFIG_SUB="$(CONFIG_SUB)" EXTRA_CPPFLAGS="$(EXTRA_CPPFLAGS)" EXTRA_LDFLAGS="$(EXTRA_LDFLAGS)" \
 	  DEST_BIN="$(PRIV_DIR)/bin/open_jtalk" \
-	  /usr/bin/env bash "$(SCRIPT_DIR)/build_stack_and_openjtalk.sh"; \
-	  touch "$(OJT_CFG_STAMP)"
-
-# Open JTalk build (CLI only) depends on the configure stamp
-$(PRIV_DIR)/bin/open_jtalk: $(OJT_CFG_STAMP) | $(PRIV_DIR)/bin
-	@# The wrapper already installed the binary; ensure dir exists.
-	install -d "$(dir $@)"
-	@# If the wrapper produced the binary, this is a no-op; otherwise fail early.
-	test -f "$@" || (echo "open_jtalk binary missing after build" && false)
+	  /usr/bin/env bash "$(SCRIPT_DIR)/build_stack_and_openjtalk.sh"
 
 # Dictionary & Voice
 $(PRIV_DIR)/dic/sys.dic: | ensure_assets $(PRIV_DIR)/dic
@@ -169,7 +153,7 @@ $(PRIV_DIR)/voices:
 
 # Clean
 clean:
-	rm -rf "$(PRIV_DIR)/bin/open_jtalk" "$(PRIV_DIR)/lib" "$(OBJ_DIR)" "$(OJT_CFG_STAMP)"
+	rm -rf "$(PRIV_DIR)/bin/open_jtalk" "$(PRIV_DIR)/lib" "$(OBJ_DIR)"
 
 distclean: clean
 	rm -rf "vendor" "$(PRIV_DIR)/dic" "$(PRIV_DIR)/voices"
