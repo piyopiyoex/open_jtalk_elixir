@@ -45,6 +45,12 @@ if [[ "$MODE" == "src" || "$MODE" == "all" ]]; then
   extract_tgz "$VENDOR/open_jtalk-1.11.tar.gz" "$VENDOR/open_jtalk"
   extract_tgz "$VENDOR/hts_engine_API-1.10.tar.gz" "$VENDOR/hts_engine"
   extract_tgz "$VENDOR/mecab-0.996.tar.gz" "$VENDOR/mecab"
+
+  # Also fetch modern config.sub / config.guess into vendor/ so configure scripts
+  # have up-to-date canonicalizers for modern triplets (Raspberry Pi etc.)
+  dl 'https://git.savannah.gnu.org/cgit/config.git/plain/config.sub' "$VENDOR/config.sub"
+  dl 'https://git.savannah.gnu.org/cgit/config.git/plain/config.guess' "$VENDOR/config.guess"
+  chmod +x "$VENDOR/config.sub" "$VENDOR/config.guess"
 fi
 
 if [[ "$MODE" == "assets" || "$MODE" == "all" ]]; then
@@ -53,3 +59,4 @@ if [[ "$MODE" == "assets" || "$MODE" == "all" ]]; then
 fi
 
 log "fetch ($MODE) done"
+

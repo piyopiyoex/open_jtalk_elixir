@@ -78,14 +78,19 @@ EXTRA_LDFLAGS ?= $(DEFAULT_LDFLAGS)
 # Keep default off for releases so we’re not redistributing third-party data.
 OPENJTALK_BUNDLE_ASSETS ?= 0
 
-# config.sub: repo-local > automake > system
-ifeq ($(wildcard $(CURDIR)/config.sub),)
-  CONFIG_SUB ?= $(shell automake --print-libdir 2>/dev/null)/config.sub
+# config.sub: prefer env CONFIG_SUB -> repo-local -> vendor -> automake -> system
+# If CI provides CONFIG_SUB env (full path) that file will be used.
+ifneq ($(wildcard $(CONFIG_SUB)),)
+  CONFIG_SUB := $(CONFIG_SUB)
+else ifneq ($(wildcard $(CURDIR)/config.sub),)
+  CONFIG_SUB := $(CURDIR)/config.sub
+else ifneq ($(wildcard $(CURDIR)/vendor/config.sub),)
+  CONFIG_SUB := $(CURDIR)/vendor/config.sub
+else
+  CONFIG_SUB := $(shell automake --print-libdir 2>/dev/null)/config.sub
   ifeq ($(wildcard $(CONFIG_SUB)),)
     CONFIG_SUB := /usr/share/misc/config.sub
   endif
-else
-  CONFIG_SUB := $(CURDIR)/config.sub
 endif
 
 OJT_CFG_STAMP := $(OBJ_DIR)/.ojt_configured-$(HOST_NORM)
@@ -93,7 +98,6 @@ OJT_CFG_STAMP := $(OBJ_DIR)/.ojt_configured-$(HOST_NORM)
 # ------------------------------------------------------------------------------
 # Targets
 # ------------------------------------------------------------------------------
-
 .PHONY: all dic voice ensure_src ensure_assets clean distclean
 
 ifeq ($(OPENJTALK_BUNDLE_ASSETS),1)

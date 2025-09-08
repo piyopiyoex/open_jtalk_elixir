@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -32,27 +32,53 @@ jobs:
       - run: mix deps.get
       - run: mix format --check-formatted
 
-  test-linux:
-    runs-on: ubuntu-latest
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm, macos-14]
     env:
       MIX_ENV: test
-      # Bundle assets so tests have dic/voice; but avoid static linking on CI
-      OPENJTALK_BUNDLE_ASSETS: "1"
-      OPENJTALK_FULL_STATIC: "0"
+      OPENJTALK_BUNDLE_ASSETS: "1"  # ensure dic/voice exist for tests
+      OPENJTALK_FULL_STATIC: "0"    # avoid static link on CI
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install build tools
+      - name: Install build tools (Linux)
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             build-essential curl tar unzip automake
-
+      # macOS: avoid Homebrew; provide a tiny 'install -D' shim for BSD install
+      - name: Provide install -D shim (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          mkdir -p "$HOME/bin"
+          cat > "$HOME/bin/install" <<'SH'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          # Minimal shim to support `install -D SRC DEST` on BSD install.
+          args=("$@")
+          dest="${@: -1}"
+          for i in "${!args[@]}"; do
+            if [[ "${args[$i]}" == "-D" ]]; then
+              unset 'args[$i]'
+              mkdir -p "$(dirname "$dest")"
+              break
+            fi
+          done
+          exec /usr/bin/install "${args[@]}"
+          SH
+          chmod +x "$HOME/bin/install"
+          echo "$HOME/bin" >> "$GITHUB_PATH"
       - uses: erlef/setup-beam@v1
         with:
           elixir-version: '1.18'
           otp-version: '27'
-
       - name: Cache mix
         uses: actions/cache@v4
         with:
@@ -60,22 +86,22 @@ jobs:
             ~/.mix
             deps
             _build
-          key: mix-${{ runner.os }}-${{ hashFiles('**/mix.lock') }}
-
+          key: mix-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/mix.lock') }}
       - name: Cache vendor downloads
         uses: actions/cache@v4
         with:
           path: vendor
-          key: vendor-${{ runner.os }}-openjtalk-${{ hashFiles('VENDOR') }}
-
+          key: vendor-${{ runner.os }}-${{ runner.arch }}-openjtalk-${{ hashFiles('VENDOR') }}
       - run: mix local.hex --force
       - run: mix local.rebar --force
       - run: mix deps.get
-
-      # Make sure the Makefile sees our env; mix.exs also passes make_env
-      - name: Compile
-        run: mix compile
-
-      - name: Run tests (audio tests are excluded by default)
-        run: mix test
-
+      - name: Fetch GNU config.guess/config.sub
+        shell: bash
+        run: |
+          curl -fsSL 'https://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.guess;hb=HEAD' -o "$RUNNER_TEMP/config.guess"
+          curl -fsSL 'https://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.sub;hb=HEAD' -o "$RUNNER_TEMP/config.sub"
+          chmod +x "$RUNNER_TEMP/config.guess" "$RUNNER_TEMP/config.sub"
+          echo "CONFIG_GUESS=$RUNNER_TEMP/config.guess" >> "$GITHUB_ENV"
+          echo "CONFIG_SUB=$RUNNER_TEMP/config.sub" >> "$GITHUB_ENV"
+      - run: mix compile
+      - run: mix test
