@@ -26,3 +26,9 @@ copy_config_sub_if_present() {
   [[ -n "$src" && -f "$src" && -n "$dst" && -d "$dst" ]] || return 0
   cp -f "$src" "$dst/config.sub" || true
 }
+
+copy_config_guess_if_present() {
+  local src="${1:-}" dst="${2:-}"
+  [[ -n "$src" && -f "$src" && -n "$dst" && -d "$dst" ]] || return 0
+  cp -f "$src" "$dst/config.guess" || true
+}

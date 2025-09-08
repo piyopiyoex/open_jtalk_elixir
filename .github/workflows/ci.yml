@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
   pull_request:
   workflow_dispatch:
 
@@ -17,8 +17,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: erlef/setup-beam@v1
         with:
-          elixir-version: '1.18'
-          otp-version: '27'
+          elixir-version: "1.18"
+          otp-version: "27"
       - name: Mix cache
         uses: actions/cache@v4
         with:
@@ -32,26 +32,105 @@ jobs:
       - run: mix deps.get
       - run: mix format --check-formatted
 
-  test-linux:
-    runs-on: ubuntu-latest
+  test-hosts:
+    name: test (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x86_64
+            os: ubuntu-latest
+          # If your org doesn't have ARM Linux runners, change this to whatever label you use,
+          # or comment this entry out temporarily.
+          - name: linux-arm64
+            os: ubuntu-24.04-arm64
+          - name: macos-arm64
+            os: macos-14
+    runs-on: ${{ matrix.os }}
     env:
       MIX_ENV: test
-      # Bundle assets so tests have dic/voice; but avoid static linking on CI
+      # Bundle assets so tests can find dic/voice; keep linking dynamic for CI.
       OPENJTALK_BUNDLE_ASSETS: "1"
       OPENJTALK_FULL_STATIC: "0"
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install build tools
+      # Tooling
+      - name: Install build tools (Linux)
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             build-essential curl tar unzip automake
+      - name: Install build tools (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew update
+          brew install automake
 
       - uses: erlef/setup-beam@v1
         with:
-          elixir-version: '1.18'
-          otp-version: '27'
+          elixir-version: "1.18"
+          otp-version: "27"
+
+      # Caches
+      - name: Cache mix
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.mix
+            deps
+            _build
+          key: mix-${{ runner.os }}-${{ hashFiles('**/mix.lock') }}
+
+      - name: Cache vendor downloads
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: vendor-${{ runner.os }}-openjtalk-${{ hashFiles('VENDOR') }}
+
+      # Feed modern config.sub/config.guess to the build scripts
+      - name: Export CONFIG_* paths
+        shell: bash
+        run: |
+          libdir="$(automake --print-libdir)"
+          echo "CONFIG_SUB=$libdir/config.sub"   >> "$GITHUB_ENV"
+          echo "CONFIG_GUESS=$libdir/config.guess" >> "$GITHUB_ENV"
+
+      # Elixir build + tests
+      - run: mix local.hex --force
+      - run: mix local.rebar --force
+      - run: mix deps.get
+      - name: Compile
+        run: mix compile
+      - name: Run tests (audio excluded by default)
+        run: mix test
+
+  cross-rpi4:
+    name: cross rpi4 (linux-x86_64 host)
+    runs-on: ubuntu-latest
+    env:
+      # Exercise Nerves defaults without forcing static linking in CI
+      MIX_TARGET: rpi4
+      OPENJTALK_BUNDLE_ASSETS: "0"
+      OPENJTALK_FULL_STATIC: "0"
+      MIX_ENV: prod
+      # Let the Makefile auto-derive CC/CXX/etc from CROSSCOMPILE
+      CROSSCOMPILE: arm-linux-gnueabihf
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install cross toolchains & build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential curl tar unzip automake \
+            gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf
+
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.18"
+          otp-version: "27"
 
       - name: Cache mix
         uses: actions/cache@v4
@@ -68,14 +147,15 @@ jobs:
           path: vendor
           key: vendor-${{ runner.os }}-openjtalk-${{ hashFiles('VENDOR') }}
 
+      - name: Export CONFIG_* paths
+        shell: bash
+        run: |
+          libdir="$(automake --print-libdir)"
+          echo "CONFIG_SUB=$libdir/config.sub"     >> "$GITHUB_ENV"
+          echo "CONFIG_GUESS=$libdir/config.guess" >> "$GITHUB_ENV"
+
       - run: mix local.hex --force
       - run: mix local.rebar --force
       - run: mix deps.get
-
-      # Make sure the Makefile sees our env; mix.exs also passes make_env
-      - name: Compile
+      - name: Cross-compile (no tests)
         run: mix compile
-
-      - name: Run tests (audio tests are excluded by default)
-        run: mix test
-

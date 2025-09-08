@@ -18,6 +18,8 @@ CC="${CC:-gcc}"; CXX="${CXX:-g++}"; AR="${AR:-ar}"; RANLIB="${RANLIB:-ranlib}"
 EXTRA_CPPFLAGS="${EXTRA_CPPFLAGS:-}"
 EXTRA_LDFLAGS="${EXTRA_LDFLAGS:-}"
 CONFIG_SUB="${CONFIG_SUB:-}"
+CONFIG_GUESS="${CONFIG_GUESS:-}"
+BUILD_TRIPLET="${BUILD_TRIPLET:-}"
 
 log "OpenJTalk dir: $OJT_DIR"
 log "OpenJTalk --host=$HOST"
@@ -27,6 +29,7 @@ if [[ -f "$OJT_DIR/Makefile" ]]; then
 fi
 find "$OJT_DIR" -type f \( -name '*.o' -o -name '*.lo' -o -name '*.la' \) -delete || true
 copy_config_sub_if_present "$CONFIG_SUB" "$OJT_DIR"
+copy_config_guess_if_present "$CONFIG_GUESS" "$OJT_DIR"
 
 ( cd "$OJT_DIR"
   env LC_ALL=C PATH="$STACK_PREFIX/bin:$PATH" \
@@ -38,5 +41,5 @@ copy_config_sub_if_present "$CONFIG_SUB" "$OJT_DIR"
       --prefix="$OJT_PREFIX" \
       --with-hts-engine-header-path="$STACK_PREFIX/include" \
       --with-hts-engine-library-path="$STACK_PREFIX/lib" \
-      --host="$HOST"
+      --host="$HOST" ${BUILD_TRIPLET:+--build="$BUILD_TRIPLET"}
 )

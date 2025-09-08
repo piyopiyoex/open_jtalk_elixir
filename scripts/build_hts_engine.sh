@@ -15,6 +15,8 @@ ensure_tools make
 
 CC="${CC:-gcc}"; CXX="${CXX:-g++}"; AR="${AR:-ar}"; RANLIB="${RANLIB:-ranlib}"
 CONFIG_SUB="${CONFIG_SUB:-}"
+CONFIG_GUESS="${CONFIG_GUESS:-}"
+BUILD_TRIPLET="${BUILD_TRIPLET:-}"
 
 log "HTS-Engine --host=$HOST"
 if [[ -f "$SRC_DIR/Makefile" ]]; then
@@ -22,13 +24,14 @@ if [[ -f "$SRC_DIR/Makefile" ]]; then
 fi
 find "$SRC_DIR" -type f \( -name '*.o' -o -name '*.lo' -o -name '*.la' \) -delete || true
 copy_config_sub_if_present "$CONFIG_SUB" "$SRC_DIR"
+copy_config_guess_if_present "$CONFIG_GUESS" "$SRC_DIR"
 
 ( cd "$SRC_DIR"
   env LC_ALL=C CC="$CC" CXX="$CXX" AR="$AR" RANLIB="$RANLIB" \
     ./configure \
       --prefix="$PREFIX" \
       --enable-static --disable-shared \
-      --host="$HOST"
+      --host="$HOST" ${BUILD_TRIPLET:+--build="$BUILD_TRIPLET"}
 )
 
 make -C "$SRC_DIR" CC="$CC" CXX="$CXX" AR="$AR" RANLIB="$RANLIB"

@@ -78,15 +78,23 @@ EXTRA_LDFLAGS ?= $(DEFAULT_LDFLAGS)
 # Keep default off for releases so we’re not redistributing third-party data.
 OPENJTALK_BUNDLE_ASSETS ?= 0
 
-# config.sub: repo-local > automake > system
+# config.{sub,guess}: repo-local > automake > system
 ifeq ($(wildcard $(CURDIR)/config.sub),)
-  CONFIG_SUB ?= $(shell automake --print-libdir 2>/dev/null)/config.sub
-  ifeq ($(wildcard $(CONFIG_SUB)),)
-    CONFIG_SUB := /usr/share/misc/config.sub
+  CONFIG_AUX ?= $(shell automake --print-libdir 2>/dev/null)
+  ifneq ($(wildcard $(CONFIG_AUX)/config.sub),)
+    CONFIG_SUB   := $(CONFIG_AUX)/config.sub
+    CONFIG_GUESS := $(CONFIG_AUX)/config.guess
+  else
+    CONFIG_SUB   := /usr/share/misc/config.sub
+    CONFIG_GUESS := /usr/share/misc/config.guess
   endif
 else
-  CONFIG_SUB := $(CURDIR)/config.sub
+  CONFIG_SUB   := $(CURDIR)/config.sub
+  CONFIG_GUESS := $(CURDIR)/config.guess
 endif
+
+# Compute build triplet using a modern config.guess (fixes Pi/aarch64 bookworm)
+BUILD_TRIPLET := $(shell sh $(CONFIG_GUESS) 2>/dev/null || echo $(HOST_NORM))
 
 OJT_CFG_STAMP := $(OBJ_DIR)/.ojt_configured-$(HOST_NORM)
 
@@ -122,13 +130,15 @@ endif
 # MeCab (static)
 $(STACK_PREFIX)/lib/libmecab.a: | ensure_src $(STACK_PREFIX)
 	+@SRC_DIR="$(MECAB_SRC)" PREFIX="$(STACK_PREFIX)" HOST="$(HOST_NORM)" \
-	  CC="$(CC)" CXX="$(CXX)" AR="$(AR)" RANLIB="$(RANLIB)" CONFIG_SUB="$(CONFIG_SUB)" \
+	  CC="$(CC)" CXX="$(CXX)" AR="$(AR)" RANLIB="$(RANLIB)" \
+	  CONFIG_SUB="$(CONFIG_SUB)" CONFIG_GUESS="$(CONFIG_GUESS)" BUILD_TRIPLET="$(BUILD_TRIPLET)" \
 	  /usr/bin/env bash "$(SCRIPT_DIR)/build_mecab.sh"
 
 # HTS Engine (static)
 $(STACK_PREFIX)/lib/libHTSEngine.a: | ensure_src $(STACK_PREFIX)
 	+@SRC_DIR="$(HTS_SRC)" PREFIX="$(STACK_PREFIX)" HOST="$(HOST_NORM)" \
-	  CC="$(CC)" CXX="$(CXX)" AR="$(AR)" RANLIB="$(RANLIB)" CONFIG_SUB="$(CONFIG_SUB)" \
+	  CC="$(CC)" CXX="$(CXX)" AR="$(AR)" RANLIB="$(RANLIB)" \
+	  CONFIG_SUB="$(CONFIG_SUB)" CONFIG_GUESS="$(CONFIG_GUESS)" BUILD_TRIPLET="$(BUILD_TRIPLET)" \
 	  /usr/bin/env bash "$(SCRIPT_DIR)/build_hts_engine.sh"
 
 # Open JTalk configure
@@ -137,7 +147,7 @@ $(OJT_CFG_STAMP): $(STACK_PREFIX)/lib/libmecab.a $(STACK_PREFIX)/lib/libHTSEngin
 	  OJT_DIR="$$OJT_DIR" HOST="$(HOST_NORM)" STACK_PREFIX="$(STACK_PREFIX)" OJT_PREFIX="$(OJT_PREFIX)" \
 	  CC="$(CC)" CXX="$(CXX)" AR="$(AR)" RANLIB="$(RANLIB)" \
 	  EXTRA_CPPFLAGS="$(EXTRA_CPPFLAGS)" EXTRA_LDFLAGS="$(EXTRA_LDFLAGS)" \
-	  CONFIG_SUB="$(CONFIG_SUB)" \
+	  CONFIG_SUB="$(CONFIG_SUB)" CONFIG_GUESS="$(CONFIG_GUESS)" BUILD_TRIPLET="$(BUILD_TRIPLET)" \
 	  /usr/bin/env bash "$(SCRIPT_DIR)/ojt_configure.sh"; \
 	  touch "$(OJT_CFG_STAMP)"
 
