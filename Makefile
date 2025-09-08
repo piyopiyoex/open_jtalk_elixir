@@ -98,7 +98,7 @@ OJT_CFG_STAMP := $(OBJ_DIR)/.ojt_configured-$(HOST_NORM)
 # ------------------------------------------------------------------------------
 # Targets
 # ------------------------------------------------------------------------------
-.PHONY: all dic voice ensure_src ensure_assets clean distclean
+.PHONY: all dic voice ensure_src ensure_assets clean distclean show-config-sub
 
 ifeq ($(OPENJTALK_BUNDLE_ASSETS),1)
 all: $(PRIV_DIR)/bin/open_jtalk $(PRIV_DIR)/dic/sys.dic $(PRIV_DIR)/voices/mei_normal.htsvoice
@@ -123,34 +123,30 @@ ensure_assets:
 	@echo "Skipping asset download (OPENJTALK_BUNDLE_ASSETS=0)"
 endif
 
-# MeCab (static)
-$(STACK_PREFIX)/lib/libmecab.a: | ensure_src $(STACK_PREFIX)
-	+@SRC_DIR="$(MECAB_SRC)" PREFIX="$(STACK_PREFIX)" HOST="$(HOST_NORM)" \
-	  CC="$(CC)" CXX="$(CXX)" AR="$(AR)" RANLIB="$(RANLIB)" CONFIG_SUB="$(CONFIG_SUB)" \
-	  /usr/bin/env bash "$(SCRIPT_DIR)/build_mecab.sh"
+# Optional helper for debugging which config.sub was chosen
+show-config-sub:
+	@printf "CONFIG_SUB = %s\n" "$(CONFIG_SUB)"
 
-# HTS Engine (static)
-$(STACK_PREFIX)/lib/libHTSEngine.a: | ensure_src $(STACK_PREFIX)
-	+@SRC_DIR="$(HTS_SRC)" PREFIX="$(STACK_PREFIX)" HOST="$(HOST_NORM)" \
-	  CC="$(CC)" CXX="$(CXX)" AR="$(AR)" RANLIB="$(RANLIB)" CONFIG_SUB="$(CONFIG_SUB)" \
-	  /usr/bin/env bash "$(SCRIPT_DIR)/build_hts_engine.sh"
-
-# Open JTalk configure
-$(OJT_CFG_STAMP): $(STACK_PREFIX)/lib/libmecab.a $(STACK_PREFIX)/lib/libHTSEngine.a | ensure_src $(OBJ_DIR) $(PRIV_DIR)/bin $(PRIV_DIR)/lib
+# Build stack (MeCab + HTS) and Open JTalk configure/build via wrapper script
+# This wrapper will build MeCab/HTS (if missing), copy config.sub, configure OJT,
+# and build/install the open_jtalk binary to $(PRIV_DIR)/bin/open_jtalk.
+$(OJT_CFG_STAMP): | ensure_src $(OBJ_DIR) $(PRIV_DIR)/bin $(PRIV_DIR)/lib
 	+@OJT_DIR=$$( [ -d "$(OJT1)" ] && echo "$(OJT1)" || echo "$(OJT2)" ); \
-	  OJT_DIR="$$OJT_DIR" HOST="$(HOST_NORM)" STACK_PREFIX="$(STACK_PREFIX)" OJT_PREFIX="$(OJT_PREFIX)" \
-	  CC="$(CC)" CXX="$(CXX)" AR="$(AR)" RANLIB="$(RANLIB)" \
-	  EXTRA_CPPFLAGS="$(EXTRA_CPPFLAGS)" EXTRA_LDFLAGS="$(EXTRA_LDFLAGS)" \
-	  CONFIG_SUB="$(CONFIG_SUB)" \
-	  /usr/bin/env bash "$(SCRIPT_DIR)/ojt_configure.sh"; \
+	  echo "Building stack and Open JTalk (OJT_DIR=$$OJT_DIR)"; \
+	  MECAB_SRC="$(MECAB_SRC)" HTS_SRC="$(HTS_SRC)" OJT_DIR="$$OJT_DIR" \
+	  STACK_PREFIX="$(STACK_PREFIX)" OJT_PREFIX="$(OJT_PREFIX)" HOST="$(HOST_NORM)" \
+	  CC="$(CC)" CXX="$(CXX)" AR="$(AR)" RANLIB="$(RANLIB)" STRIP_BIN="$(STRIP)" \
+	  CONFIG_SUB="$(CONFIG_SUB)" EXTRA_CPPFLAGS="$(EXTRA_CPPFLAGS)" EXTRA_LDFLAGS="$(EXTRA_LDFLAGS)" \
+	  DEST_BIN="$(PRIV_DIR)/bin/open_jtalk" \
+	  /usr/bin/env bash "$(SCRIPT_DIR)/build_stack_and_openjtalk.sh"; \
 	  touch "$(OJT_CFG_STAMP)"
 
-# Open JTalk build (CLI only)
+# Open JTalk build (CLI only) depends on the configure stamp
 $(PRIV_DIR)/bin/open_jtalk: $(OJT_CFG_STAMP) | $(PRIV_DIR)/bin
-	+@OJT_DIR=$$( [ -d "$(OJT1)" ] && echo "$(OJT1)" || echo "$(OJT2)" ); \
-	  OJT_DIR="$$OJT_DIR" DEST_BIN="$(PRIV_DIR)/bin/open_jtalk" STRIP_BIN="$(STRIP)" \
-	  CC="$(CC)" CXX="$(CXX)" AR="$(AR)" RANLIB="$(RANLIB)" STACK_PREFIX="$(STACK_PREFIX)" \
-	  /usr/bin/env bash "$(SCRIPT_DIR)/ojt_build.sh"
+	@# The wrapper already installed the binary; ensure dir exists.
+	install -d "$(dir $@)"
+	@# If the wrapper produced the binary, this is a no-op; otherwise fail early.
+	test -f "$@" || (echo "open_jtalk binary missing after build" && false)
 
 # Dictionary & Voice
 $(PRIV_DIR)/dic/sys.dic: | ensure_assets $(PRIV_DIR)/dic
