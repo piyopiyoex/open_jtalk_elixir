@@ -168,14 +168,6 @@ OpenJTalk.Assets.reset_cache()
 How you provision those files into your image is outside the scope of this
 library.
 
-## Troubleshooting
-
-- `{:error, {:binary_missing, _}}` — `open_jtalk` binary not found/built.
-- `{:error, {:dictionary_missing, _}}` — `sys.dic` not found; set `OPENJTALK_DIC_DIR` or bundle assets.
-- `{:error, {:voice_missing, _}}` — `.htsvoice` not found; set `OPENJTALK_VOICE` or bundle assets.
-- `{:error, {:open_jtalk_exit, code, msg}}` — `open_jtalk` exited non-zero; see `msg`.
-- Audio playback requires one of: `aplay` (ALSA), `paplay` (PulseAudio), `afplay` (macOS), or `play` (SoX).
-
 ## Third-party components & licenses
 
 This package does not redistribute third-party assets by default. At compile
