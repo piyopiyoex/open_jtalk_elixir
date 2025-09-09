@@ -47,6 +47,18 @@ Optional environment flags (honored by the Makefile):
 - `OPENJTALK_FULL_STATIC=1` — attempt a fully static `open_jtalk` (Linux only; requires static libstdc++)
 - `OPENJTALK_BUNDLE_ASSETS=0|1` — whether to bundle dictionary/voice into `priv/`
 
+### Tested platforms
+
+Host builds (compile and run on the same machine):
+
+- Linux x86_64
+- Linux aarch64
+- macOS 14 (arm64, Apple Silicon)
+
+Cross-compile (host → target):
+
+- Linux x86_64 → Nerves rpi4 (aarch64)
+
 ## Quick start
 
 ```elixir
