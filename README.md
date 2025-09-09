@@ -5,9 +5,9 @@
 
 <!-- MODULEDOC -->
 
-Use Open JTalk from Elixir. This package builds a local `open_jtalk` CLI (and
-optionally bundles a UTF-8 dictionary and an HTS voice) and exposes three
-convenient APIs:
+Use Open JTalk from Elixir. This package builds a local `open_jtalk` CLI and,
+by default, bundles a UTF-8 dictionary and an HTS voice (you can disable this),
+exposing three convenient APIs:
 
 - `OpenJTalk.to_wav/2` — synthesize text to a WAV file
 - `OpenJTalk.to_binary/2` — synthesize and return WAV bytes
@@ -33,8 +33,9 @@ mix compile
 ```
 
 On first compile the project may download and build MeCab, HTS Engine API,
-and Open JTalk. You can optionally bundle a UTF-8 dictionary and a Mei voice
-into `priv/` (see `OPENJTALK_BUNDLE_ASSETS` below).
+and Open JTalk. By default it also downloads and bundles a UTF-8 dictionary
+and a Mei voice into `priv/` (you can turn this off with
+`OPENJTALK_BUNDLE_ASSETS=0`).
 
 ### Build requirements
 
@@ -50,7 +51,7 @@ Optional environment flags (honored by the Makefile):
 
 ```elixir
 # play via system audio player (aplay/paplay/afplay/play)
-OpenJTalk.say("元氣でっすか、元氣があればなんでもできる")
+OpenJTalk.say("元氣ですかあ 、元氣が有れば、なんでもできる")
 ```
 
 ### Options
@@ -99,7 +100,7 @@ If you change environment variables at runtime (or move files), refresh the
 cached paths:
 
 ```elixir
-:ok = OpenJTalk.Assets.reset_cache()
+OpenJTalk.Assets.reset_cache()
 ```
 
 ## Using with Nerves
@@ -161,19 +162,11 @@ System.put_env("OPENJTALK_CLI",     "/data/open_jtalk/bin/open_jtalk")
 System.put_env("OPENJTALK_DIC_DIR", "/data/open_jtalk/dic")
 System.put_env("OPENJTALK_VOICE",   "/data/open_jtalk/voices/mei_normal.htsvoice")
 
-:ok = OpenJTalk.Assets.reset_cache()
+OpenJTalk.Assets.reset_cache()
 ```
 
 How you provision those files into your image is outside the scope of this
 library.
-
-### Overriding the defaults
-
-For Nerves builds this project uses the build defaults above, but you can
-override them by exporting `OPENJTALK_BUNDLE_ASSETS` or `OPENJTALK_FULL_STATIC` before `mix compile`.
-
-> Note: fully static linking is unsupported on macOS host triplets; this is
-> only relevant for cross-compile targets that try to produce macOS artifacts.
 
 ## Troubleshooting
 

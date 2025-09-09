@@ -49,7 +49,7 @@ EXTRA_CPPFLAGS ?= $(DEFAULT_CPPFLAGS)
 UNAME_S := $(shell uname -s)
 
 # OPENJTALK_FULL_STATIC defaults to 1 when MIX_TARGET is set (Nerves), otherwise 0.
-# Users can still override: `make OPENJTALK_FULL_STATIC=0`.
+# Users can still override by exporting the env var.
 OPENJTALK_FULL_STATIC ?= $(if $(strip $(MIX_TARGET)),1,0)
 
 # Disallow static for *darwin* targets (static linking not supported there).
@@ -75,8 +75,8 @@ endif
 EXTRA_LDFLAGS ?= $(DEFAULT_LDFLAGS)
 
 # Whether to bundle dictionary/voices into priv/ (1=yes, 0=no).
-# Keep default off for releases so we’re not redistributing third-party data.
-OPENJTALK_BUNDLE_ASSETS ?= 0
+# Default ON for an “it just works” experience; CI/users can opt out via env.
+OPENJTALK_BUNDLE_ASSETS ?= 1
 
 # config.sub: prefer env CONFIG_SUB -> repo-local -> vendor -> automake -> system
 ifneq ($(wildcard $(CONFIG_SUB)),)
