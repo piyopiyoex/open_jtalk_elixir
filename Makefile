@@ -13,9 +13,6 @@ HTS_SRC   := vendor/hts_engine/hts_engine_API-1.10
 OJT1      := vendor/open_jtalk/open_jtalk-1.11
 OJT2      := vendor/open_jtalk-1.11
 
-DIC_TGZ := vendor/open_jtalk_dic_utf_8-1.11.tar.gz
-MEI_ZIP := vendor/MMDAgent_Example-1.8.zip
-
 # Toolchain
 CROSSCOMPILE ?=
 CC     ?= $(if $(CROSSCOMPILE),$(CROSSCOMPILE)-gcc,gcc)
@@ -92,6 +89,13 @@ else
   endif
 endif
 
+# Elixir runner
+ELIXIR ?= elixir
+FETCH_EXS := $(SCRIPT_DIR)/fetch_sources.exs
+FETCH_JOBS ?= $(shell $(ELIXIR) -e 'IO.puts(System.schedulers_online()*2)')
+FETCH_RETRIES ?= 3
+FETCH_VERBOSE ?= 1
+
 # ------------------------------------------------------------------------------
 # Targets
 # ------------------------------------------------------------------------------
@@ -108,11 +112,19 @@ voice: $(PRIV_DIR)/voices/mei_normal.htsvoice
 
 # Fetchers (idempotent)
 ensure_src:
-	+@ROOT_DIR="$(CURDIR)" /usr/bin/env bash "$(SCRIPT_DIR)/fetch_sources.sh" src
+	+@OPENJTALK_ROOT_DIR="$(CURDIR)" \
+	   OPENJTALK_FETCH_JOBS="$(FETCH_JOBS)" \
+	   OPENJTALK_FETCH_RETRIES="$(FETCH_RETRIES)" \
+	   OPENJTALK_FETCH_VERBOSE="$(FETCH_VERBOSE)" \
+	   $(ELIXIR) "$(FETCH_EXS)" src
 
 ifeq ($(OPENJTALK_BUNDLE_ASSETS),1)
 ensure_assets:
-	+@ROOT_DIR="$(CURDIR)" /usr/bin/env bash "$(SCRIPT_DIR)/fetch_sources.sh" assets
+	+@OPENJTALK_ROOT_DIR="$(CURDIR)" \
+	   OPENJTALK_FETCH_JOBS="$(FETCH_JOBS)" \
+	   OPENJTALK_FETCH_RETRIES="$(FETCH_RETRIES)" \
+	   OPENJTALK_FETCH_VERBOSE="$(FETCH_VERBOSE)" \
+	   $(ELIXIR) "$(FETCH_EXS)" assets
 else
 ensure_assets:
 	@echo "Skipping asset download (OPENJTALK_BUNDLE_ASSETS=0)"
@@ -132,14 +144,12 @@ $(PRIV_DIR)/bin/open_jtalk: | ensure_src $(OBJ_DIR) $(PRIV_DIR)/bin $(PRIV_DIR)/
 	  DEST_BIN="$(PRIV_DIR)/bin/open_jtalk" \
 	  /usr/bin/env bash "$(SCRIPT_DIR)/build_stack_and_openjtalk.sh"
 
-# Dictionary & Voice
+# Dictionary & Voice (no-op; installed by ensure_assets)
 $(PRIV_DIR)/dic/sys.dic: | ensure_assets $(PRIV_DIR)/dic
-	+@DIC_TGZ="$(DIC_TGZ)" DEST_DIR="$(PRIV_DIR)/dic" \
-	  /usr/bin/env bash "$(SCRIPT_DIR)/install_dic.sh"
+	@true
 
 $(PRIV_DIR)/voices/mei_normal.htsvoice: | ensure_assets $(PRIV_DIR)/voices
-	+@VOICE_ZIP="$(MEI_ZIP)" DEST_VOICE="$(PRIV_DIR)/voices/mei_normal.htsvoice" \
-	  /usr/bin/env bash "$(SCRIPT_DIR)/install_voice.sh"
+	@true
 
 # Dirs
 $(OBJ_DIR) \
