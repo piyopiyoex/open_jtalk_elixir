@@ -36,7 +36,7 @@ STRIP_BIN="${STRIP_BIN:-strip}"
 # Make sure basic tools are present
 ensure_tools make install find
 
-log "build_stack_and_openjtalk -- host=${HOST}"
+log "build_openjtalk_and_deps -- host=${HOST}"
 log "stack prefix: ${STACK_PREFIX}"
 log "open_jtalk dst: ${DEST_BIN}"
 
@@ -91,7 +91,7 @@ log "Configuring Open JTalk"
   export CC="${CC}" CXX="${CXX}" AR="${AR}" RANLIB="${RANLIB}"
   export EXTRA_CPPFLAGS="${EXTRA_CPPFLAGS}" EXTRA_LDFLAGS="${EXTRA_LDFLAGS}"
   export CONFIG_SUB="${CONFIG_SUB:-}"
-  "$SCRIPT_DIR/ojt_configure.sh"
+  "$SCRIPT_DIR/configure_openjtalk.sh"
 )
 
 # Build & install open_jtalk binary
@@ -102,7 +102,7 @@ log "Building & installing open_jtalk"
   export STRIP_BIN="${STRIP_BIN}"
   export STACK_PREFIX="${STACK_PREFIX}"
   export CC="${CC}" CXX="${CXX}" AR="${AR}" RANLIB="${RANLIB}"
-  "$SCRIPT_DIR/ojt_build.sh"
+  "$SCRIPT_DIR/build_openjtalk.sh"
 )
 
-log "build_stack_and_openjtalk done"
+log "build_openjtalk_and_deps done"

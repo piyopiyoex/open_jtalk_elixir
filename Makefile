@@ -142,7 +142,7 @@ $(PRIV_DIR)/bin/open_jtalk: | ensure_src $(OBJ_DIR) $(PRIV_DIR)/bin $(PRIV_DIR)/
 	  CC="$(CC)" CXX="$(CXX)" AR="$(AR)" RANLIB="$(RANLIB)" STRIP_BIN="$(STRIP)" \
 	  CONFIG_SUB="$(CONFIG_SUB)" EXTRA_CPPFLAGS="$(EXTRA_CPPFLAGS)" EXTRA_LDFLAGS="$(EXTRA_LDFLAGS)" \
 	  DEST_BIN="$(PRIV_DIR)/bin/open_jtalk" \
-	  /usr/bin/env bash "$(SCRIPT_DIR)/build_stack_and_openjtalk.sh"
+	  /usr/bin/env bash "$(SCRIPT_DIR)/build_openjtalk_and_deps.sh"
 
 # Dictionary & Voice (no-op; installed by ensure_assets)
 $(PRIV_DIR)/dic/sys.dic: | ensure_assets $(PRIV_DIR)/dic
