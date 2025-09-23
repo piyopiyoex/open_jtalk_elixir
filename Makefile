@@ -89,13 +89,6 @@ else
   endif
 endif
 
-# Elixir runner
-ELIXIR ?= elixir
-FETCH_EXS := $(SCRIPT_DIR)/fetch_sources.exs
-FETCH_JOBS ?= $(shell $(ELIXIR) -e 'IO.puts(System.schedulers_online()*2)')
-FETCH_RETRIES ?= 3
-FETCH_VERBOSE ?= 1
-
 # ------------------------------------------------------------------------------
 # Targets
 # ------------------------------------------------------------------------------
@@ -110,21 +103,13 @@ endif
 dic:   $(PRIV_DIR)/dic/sys.dic
 voice: $(PRIV_DIR)/voices/mei_normal.htsvoice
 
-# Fetchers (idempotent)
+# Fetchers (idempotent) — driven by the Elixir script
 ensure_src:
-	+@OPENJTALK_ROOT_DIR="$(CURDIR)" \
-	   OPENJTALK_FETCH_JOBS="$(FETCH_JOBS)" \
-	   OPENJTALK_FETCH_RETRIES="$(FETCH_RETRIES)" \
-	   OPENJTALK_FETCH_VERBOSE="$(FETCH_VERBOSE)" \
-	   $(ELIXIR) "$(FETCH_EXS)" src
+	+@ROOT_DIR="$(CURDIR)" elixir "$(SCRIPT_DIR)/fetch_sources.exs" src
 
 ifeq ($(OPENJTALK_BUNDLE_ASSETS),1)
 ensure_assets:
-	+@OPENJTALK_ROOT_DIR="$(CURDIR)" \
-	   OPENJTALK_FETCH_JOBS="$(FETCH_JOBS)" \
-	   OPENJTALK_FETCH_RETRIES="$(FETCH_RETRIES)" \
-	   OPENJTALK_FETCH_VERBOSE="$(FETCH_VERBOSE)" \
-	   $(ELIXIR) "$(FETCH_EXS)" assets
+	+@ROOT_DIR="$(CURDIR)" elixir "$(SCRIPT_DIR)/fetch_sources.exs" assets
 else
 ensure_assets:
 	@echo "Skipping asset download (OPENJTALK_BUNDLE_ASSETS=0)"
@@ -137,14 +122,19 @@ show-config-sub:
 $(PRIV_DIR)/bin/open_jtalk: | ensure_src $(OBJ_DIR) $(PRIV_DIR)/bin $(PRIV_DIR)/lib
 	+@OJT_DIR=$$( [ -d "$(OJT1)" ] && echo "$(OJT1)" || echo "$(OJT2)" ); \
 	  echo "Building stack and Open JTalk (OJT_DIR=$$OJT_DIR)"; \
-	  MECAB_SRC="$(MECAB_SRC)" HTS_SRC="$(HTS_SRC)" OJT_DIR="$$OJT_DIR" \
-	  STACK_PREFIX="$(STACK_PREFIX)" OJT_PREFIX="$(OJT_PREFIX)" HOST="$(HOST_NORM)" \
-	  CC="$(CC)" CXX="$(CXX)" AR="$(AR)" RANLIB="$(RANLIB)" STRIP_BIN="$(STRIP)" \
-	  CONFIG_SUB="$(CONFIG_SUB)" EXTRA_CPPFLAGS="$(EXTRA_CPPFLAGS)" EXTRA_LDFLAGS="$(EXTRA_LDFLAGS)" \
+	  MECAB_SRC="$(MECAB_SRC)" \
+	  HTS_SRC="$(HTS_SRC)" \
+	  OJT_DIR="$$OJT_DIR" \
+	  STACK_PREFIX="$(STACK_PREFIX)" \
+	  OJT_PREFIX="$(OJT_PREFIX)" \
+	  HOST="$(HOST_NORM)" \
+	  CONFIG_SUB="$(CONFIG_SUB)" \
+	  EXTRA_CPPFLAGS="$(EXTRA_CPPFLAGS)" \
+	  EXTRA_LDFLAGS="$(EXTRA_LDFLAGS)" \
 	  DEST_BIN="$(PRIV_DIR)/bin/open_jtalk" \
 	  /usr/bin/env bash "$(SCRIPT_DIR)/build_openjtalk_and_deps.sh"
 
-# Dictionary & Voice (no-op; installed by ensure_assets)
+# Dictionary & Voice (handled inside fetch_sources.exs)
 $(PRIV_DIR)/dic/sys.dic: | ensure_assets $(PRIV_DIR)/dic
 	@true
 

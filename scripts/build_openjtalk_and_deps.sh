@@ -3,37 +3,30 @@
 # Build MeCab + HTS Engine, configure Open JTalk, and build/install the open_jtalk CLI.
 # Idempotent: only builds steps whose expected outputs are missing.
 #
-# Expects certain environment variables to be provided by the Makefile invocation:
-#   MECAB_SRC, HTS_SRC, OJT_DIR, STACK_PREFIX, OJT_PREFIX, HOST
-#   CC, CXX, AR, RANLIB, STRIP_BIN, DEST_BIN
-#   CONFIG_SUB (optional)
-#   EXTRA_CPPFLAGS, EXTRA_LDFLAGS (optional)
-#
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
 
-# Required vars (fail early with a friendly message)
+# Required (fail early)
 : "${MECAB_SRC:?MECAB_SRC must be set}"
 : "${HTS_SRC:?HTS_SRC must be set}"
 : "${OJT_DIR:?OJT_DIR must be set}"
 : "${STACK_PREFIX:?STACK_PREFIX must be set}"
 : "${OJT_PREFIX:?OJT_PREFIX must be set}"
 : "${HOST:?HOST must be set}"
-: "${CC:-gcc}"
-: "${CXX:-g++}"
-: "${AR:-ar}"
-: "${RANLIB:-ranlib}"
 : "${DEST_BIN:?DEST_BIN must be set}"
 
 # Optional
+CC="${CC:-gcc}"
+CXX="${CXX:-g++}"
+AR="${AR:-ar}"
+RANLIB="${RANLIB:-ranlib}"
+STRIP_BIN="${STRIP_BIN:-strip}"
 CONFIG_SUB="${CONFIG_SUB:-}"
 EXTRA_CPPFLAGS="${EXTRA_CPPFLAGS:-}"
 EXTRA_LDFLAGS="${EXTRA_LDFLAGS:-}"
-STRIP_BIN="${STRIP_BIN:-strip}"
 
-# Make sure basic tools are present
 ensure_tools make install find
 
 log "build_openjtalk_and_deps -- host=${HOST}"
@@ -81,13 +74,13 @@ if [[ -n "${CONFIG_SUB}" && -f "${CONFIG_SUB}" ]]; then
   copy_config_sub_if_present "${CONFIG_SUB}" "${OJT_DIR}"
 fi
 
-# Configure Open JTalk (idempotent step: configure may be re-run harmlessly)
+# Configure Open JTalk (idempotent)
 log "Configuring Open JTalk"
 (
-  export OJT_DIR="${OJT_DIR}"
+  export SRC_DIR="${OJT_DIR}"
   export HOST="${HOST}"
   export STACK_PREFIX="${STACK_PREFIX}"
-  export OJT_PREFIX="${OJT_PREFIX}"
+  export PREFIX="${OJT_PREFIX}"
   export CC="${CC}" CXX="${CXX}" AR="${AR}" RANLIB="${RANLIB}"
   export EXTRA_CPPFLAGS="${EXTRA_CPPFLAGS}" EXTRA_LDFLAGS="${EXTRA_LDFLAGS}"
   export CONFIG_SUB="${CONFIG_SUB:-}"
@@ -97,7 +90,7 @@ log "Configuring Open JTalk"
 # Build & install open_jtalk binary
 log "Building & installing open_jtalk"
 (
-  export OJT_DIR="${OJT_DIR}"
+  export SRC_DIR="${OJT_DIR}"
   export DEST_BIN="${DEST_BIN}"
   export STRIP_BIN="${STRIP_BIN}"
   export STACK_PREFIX="${STACK_PREFIX}"
