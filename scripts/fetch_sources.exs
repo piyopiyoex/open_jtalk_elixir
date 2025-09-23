@@ -11,25 +11,41 @@
 #   OPENJTALK_FETCH_VERBOSE (0=quiet, 1=normal [default], 2=verbose)
 #
 defmodule Main do
+  # ---------------- centralized names ----------------
+  @config_sub_file "config.sub"
+  @config_guess_file "config.guess"
+
+  @openjtalk_tgz_file "open_jtalk-1.11.tar.gz"
+  @hts_tgz_file "hts_engine_API-1.10.tar.gz"
+  @mecab_tgz_file "mecab-0.996.tar.gz"
+
+  @dic_tgz_file "open_jtalk_dic_utf_8-1.11.tar.gz"
+  @mei_zip_file "MMDAgent_Example-1.8.zip"
+
+  @openjtalk_dir "open_jtalk"
+  @hts_dir "hts_engine"
+  @mecab_dir "mecab"
+
+  @mei_voice_file "mei_normal.htsvoice"
+
   # filename => url
   @gnuconfig_urls %{
-    "config.sub" => "https://raw.githubusercontent.com/spack/gnuconfig/master/config.sub",
-    "config.guess" => "https://raw.githubusercontent.com/spack/gnuconfig/master/config.guess"
+    @config_sub_file => "https://raw.githubusercontent.com/spack/gnuconfig/master/config.sub",
+    @config_guess_file => "https://raw.githubusercontent.com/spack/gnuconfig/master/config.guess"
   }
 
   @src_urls %{
-    "open_jtalk-1.11.tar.gz" =>
+    @openjtalk_tgz_file =>
       "https://sourceforge.net/projects/open-jtalk/files/Open%20JTalk/open_jtalk-1.11/open_jtalk-1.11.tar.gz/download",
-    "hts_engine_API-1.10.tar.gz" =>
+    @hts_tgz_file =>
       "https://sourceforge.net/projects/hts-engine/files/hts_engine%20API/hts_engine_API-1.10/hts_engine_API-1.10.tar.gz/download",
-    "mecab-0.996.tar.gz" =>
-      "https://deb.debian.org/debian/pool/main/m/mecab/mecab_0.996.orig.tar.gz"
+    @mecab_tgz_file => "https://deb.debian.org/debian/pool/main/m/mecab/mecab_0.996.orig.tar.gz"
   }
 
   @asset_urls %{
-    "open_jtalk_dic_utf_8-1.11.tar.gz" =>
+    @dic_tgz_file =>
       "https://sourceforge.net/projects/open-jtalk/files/Dictionary/open_jtalk_dic-1.11/open_jtalk_dic_utf_8-1.11.tar.gz/download",
-    "MMDAgent_Example-1.8.zip" =>
+    @mei_zip_file =>
       "https://sourceforge.net/projects/mmdagent/files/MMDAgent_Example/MMDAgent_Example-1.8/MMDAgent_Example-1.8.zip/download"
   }
 
@@ -39,6 +55,37 @@ defmodule Main do
     File.mkdir_p!(cfg.vendor)
     File.mkdir_p!(cfg.priv_dic)
     File.mkdir_p!(cfg.priv_voices)
+
+    need_src? =
+      case cfg.mode do
+        "src" -> not sources_ready?(cfg)
+        "all" -> not sources_ready?(cfg)
+        _ -> false
+      end
+
+    need_assets? =
+      case cfg.mode do
+        "assets" -> not assets_ready?(cfg)
+        "all" -> not assets_ready?(cfg)
+        _ -> false
+      end
+
+    cond do
+      cfg.mode == "src" and not need_src? ->
+        qlog("sources present; skipping src")
+        System.halt(0)
+
+      cfg.mode == "assets" and not need_assets? ->
+        qlog("assets present; skipping assets")
+        System.halt(0)
+
+      cfg.mode == "all" and not need_src? and not need_assets? ->
+        qlog("everything present; nothing to do")
+        System.halt(0)
+
+      true ->
+        :ok
+    end
 
     {src_jobs, asset_jobs} = build_download_jobs(cfg.vendor)
 
@@ -55,7 +102,11 @@ defmodule Main do
 
     qlog("fetch (#{cfg.mode}) starting, jobs=#{download_concurrency}, retries=#{cfg.retries}")
 
-    if cfg.mode in ["src", "all"], do: prefetch_gnuconfig!(cfg.vendor, cfg.retries)
+    if cfg.mode in ["src", "all"] and need_src? do
+      unless gnuconfig_ready?(cfg.vendor) do
+        prefetch_gnuconfig!(cfg.vendor, cfg.retries)
+      end
+    end
 
     dl_result =
       run_tasks_concurrently(jobs, download_concurrency, fn {url, dest} ->
@@ -68,76 +119,83 @@ defmodule Main do
     end
 
     if cfg.mode in ["src", "all"] do
-      tgzs = list_source_tarballs(cfg.vendor)
+      if need_src? do
+        tgzs = list_source_tarballs(cfg.vendor)
 
-      verify_result =
-        run_tasks_concurrently(tgzs, min(2, cfg.jobs), fn tgz ->
-          case verify_tarball(tgz) do
-            :ok ->
-              :ok
-
-            {:error, _} ->
-              base = Path.basename(tgz)
-              url = Map.fetch!(@src_urls, base)
-              _ = File.rm(tgz)
-
-              with :ok <- download_file(url, tgz, cfg.retries, cfg.retries),
-                   :ok <- verify_tarball(tgz) do
+        verify_result =
+          run_tasks_concurrently(tgzs, min(2, cfg.jobs), fn tgz ->
+            case verify_tarball(tgz) do
+              :ok ->
                 :ok
-              else
-                {:error, msg} -> {:error, "re-download failed for #{base}: #{msg}"}
-                other -> {:error, "re-verify failed for #{base}: #{inspect(other)}"}
-              end
-          end
-        end)
 
-      case verify_result do
-        {:ok, _} -> :ok
-        {:error, es} -> abort_with_message("Verification failed:\n" <> Enum.join(es, "\n"))
-      end
+              {:error, _} ->
+                base = Path.basename(tgz)
+                url = Map.fetch!(@src_urls, base)
+                _ = File.rm(tgz)
 
-      extract_targets = [
-        {Path.join(cfg.vendor, "open_jtalk-1.11.tar.gz"), Path.join(cfg.vendor, "open_jtalk")},
-        {Path.join(cfg.vendor, "hts_engine_API-1.10.tar.gz"),
-         Path.join(cfg.vendor, "hts_engine")},
-        {Path.join(cfg.vendor, "mecab-0.996.tar.gz"), Path.join(cfg.vendor, "mecab")}
-      ]
+                with :ok <- download_file(url, tgz, cfg.retries, cfg.retries),
+                     :ok <- verify_tarball(tgz) do
+                  :ok
+                else
+                  {:error, msg} -> {:error, "re-download failed for #{base}: #{msg}"}
+                  other -> {:error, "re-verify failed for #{base}: #{inspect(other)}"}
+                end
+            end
+          end)
 
-      qlog("extracting sources...")
+        case verify_result do
+          {:ok, _} -> :ok
+          {:error, es} -> abort_with_message("Verification failed:\n" <> Enum.join(es, "\n"))
+        end
 
-      ex_result =
-        run_tasks_concurrently(extract_targets, extract_concurrency, fn {tgz, dir} ->
-          qlog("extracting #{Path.basename(tgz)} -> #{dir}")
-          extract_tarball(tgz, dir)
-        end)
+        extract_targets = [
+          {Path.join(cfg.vendor, @openjtalk_tgz_file), Path.join(cfg.vendor, @openjtalk_dir)},
+          {Path.join(cfg.vendor, @hts_tgz_file), Path.join(cfg.vendor, @hts_dir)},
+          {Path.join(cfg.vendor, @mecab_tgz_file), Path.join(cfg.vendor, @mecab_dir)}
+        ]
 
-      case ex_result do
-        {:ok, _} -> qlog("extracting sources done")
-        {:error, es} -> abort_with_message("Extraction failed:\n" <> Enum.join(es, "\n"))
+        qlog("extracting sources...")
+
+        ex_result =
+          run_tasks_concurrently(extract_targets, extract_concurrency, fn {tgz, dir} ->
+            qlog("extracting #{Path.basename(tgz)} -> #{dir}")
+            extract_tarball(tgz, dir)
+          end)
+
+        case ex_result do
+          {:ok, _} -> qlog("extracting sources done")
+          {:error, es} -> abort_with_message("Extraction failed:\n" <> Enum.join(es, "\n"))
+        end
+      else
+        qlog("sources present; skipping extraction")
       end
     end
 
     if cfg.mode in ["assets", "all"] do
-      qlog("installing assets...")
+      if need_assets? do
+        qlog("installing assets...")
 
-      dict_tgz = Path.join(cfg.vendor, "open_jtalk_dic_utf_8-1.11.tar.gz")
-      qlog("installing dictionary: #{Path.basename(dict_tgz)} -> #{cfg.priv_dic}")
+        dict_tgz = Path.join(cfg.vendor, @dic_tgz_file)
+        qlog("installing dictionary: #{Path.basename(dict_tgz)} -> #{cfg.priv_dic}")
 
-      case install_dictionary_archive(dict_tgz, cfg.priv_dic) do
-        :ok -> qlog("dictionary installed -> #{cfg.priv_dic} (ok)")
-        {:error, m} -> abort_with_message("Dictionary install failed: " <> m)
+        case install_dictionary_archive(dict_tgz, cfg.priv_dic) do
+          :ok -> qlog("dictionary installed -> #{cfg.priv_dic} (ok)")
+          {:error, m} -> abort_with_message("Dictionary install failed: " <> m)
+        end
+
+        voice_zip = Path.join(cfg.vendor, @mei_zip_file)
+        voice_dst = Path.join(cfg.priv_voices, @mei_voice_file)
+        qlog("installing voice: #{Path.basename(voice_zip)} -> #{voice_dst}")
+
+        case install_voice_zip(voice_zip, voice_dst) do
+          :ok -> qlog("voice installed -> #{voice_dst} (ok)")
+          {:error, m} -> abort_with_message("Voice install failed: " <> m)
+        end
+
+        qlog("installing assets done")
+      else
+        qlog("assets present; skipping install")
       end
-
-      voice_zip = Path.join(cfg.vendor, "MMDAgent_Example-1.8.zip")
-      voice_dst = Path.join(cfg.priv_voices, "mei_normal.htsvoice")
-      qlog("installing voice: #{Path.basename(voice_zip)} -> #{voice_dst}")
-
-      case install_voice_zip(voice_zip, voice_dst) do
-        :ok -> qlog("voice installed -> #{voice_dst} (ok)")
-        {:error, m} -> abort_with_message("Voice install failed: " <> m)
-      end
-
-      qlog("installing assets done")
     end
 
     qlog("fetch (#{cfg.mode}) done")
@@ -332,7 +390,7 @@ defmodule Main do
       {out, status} = System.cmd("unzip", ["-q", "-o", zip, "-d", tmp], stderr_to_stdout: true)
       if status != 0, do: {:error, "unzip failed: #{out}"}, else: :ok
 
-      candidate = Path.join(tmp, "MMDAgent_Example-1.8/Voice/mei/mei_normal.htsvoice")
+      candidate = Path.join(tmp, "MMDAgent_Example-1.8/Voice/mei/#{@mei_voice_file}")
 
       src =
         cond do
@@ -343,7 +401,7 @@ defmodule Main do
             case System.cmd("bash", [
                    "-lc",
                    "shopt -s globstar nullglob; printf '%s\n' " <>
-                     ~s{"#{tmp}/**/mei_normal.htsvoice"}
+                     ~s{"#{tmp}/**/#{@mei_voice_file}"}
                  ]) do
               {paths, 0} ->
                 paths
@@ -355,7 +413,7 @@ defmodule Main do
             end
         end
 
-      if is_nil(src), do: {:error, "mei_normal.htsvoice not found"}, else: :ok
+      if is_nil(src), do: {:error, "#{@mei_voice_file} not found"}, else: :ok
 
       File.mkdir_p!(Path.dirname(dest_voice))
       File.cp!(src, dest_voice)
@@ -363,6 +421,32 @@ defmodule Main do
     rescue
       e -> {:error, "exception while installing voice: #{Exception.message(e)}"}
     end
+  end
+
+  defp dir_nonempty?(path) when is_binary(path),
+    do: File.dir?(path) and match?([_ | _], File.ls!(path))
+
+  defp sources_ready?(cfg) do
+    dir_nonempty?(Path.join(cfg.vendor, @openjtalk_dir)) and
+      dir_nonempty?(Path.join(cfg.vendor, @hts_dir)) and
+      dir_nonempty?(Path.join(cfg.vendor, @mecab_dir))
+  rescue
+    _ -> false
+  end
+
+  defp assets_ready?(cfg) do
+    File.exists?(Path.join(cfg.priv_dic, "sys.dic")) and
+      File.exists?(Path.join(cfg.priv_voices, @mei_voice_file))
+  end
+
+  defp gnuconfig_ready?(vendor) do
+    sub = Path.join(vendor, @config_sub_file)
+    gue = Path.join(vendor, @config_guess_file)
+
+    File.exists?(sub) and File.stat!(sub).size > 0 and
+      File.exists?(gue) and File.stat!(gue).size > 0
+  rescue
+    _ -> false
   end
 
   defp prefetch_gnuconfig!(vendor, retries) do
