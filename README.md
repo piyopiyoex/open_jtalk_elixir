@@ -15,6 +15,8 @@ exposing convenient functions:
 - `OpenJTalk.Wav.concat_binaries/1` — merge multiple WAV binaries (same format)
 - `OpenJTalk.Wav.concat_files/1` — merge multiple WAV files from paths (same format)
 
+[![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https%3A%2F%2Fgithub.com%2Fpiyopiyoex%2Fopen_jtalk_elixir%2Fblob%2Fmain%2Fnotebooks%2Fgetting-started.md)
+
 ## Install
 
 Add the dependency to your `mix.exs`:
