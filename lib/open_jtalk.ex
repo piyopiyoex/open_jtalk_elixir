@@ -69,54 +69,7 @@ defmodule OpenJTalk do
   Returns the original `opts` on success.
   """
   @spec validate_options!(keyword) :: keyword
-  def validate_options!(opts) when is_list(opts) do
-    check_known_keys!(opts)
-    validate_playback_mode!(opts)
-    validate_timeout!(opts)
-    opts
-  end
-
-  defp check_known_keys!(opts) do
-    allowed = [
-      :timbre,
-      :pitch_shift,
-      :rate,
-      :gain,
-      :voice,
-      :dictionary,
-      :timeout,
-      :playback_mode,
-      :out
-    ]
-
-    unknown =
-      opts
-      |> Keyword.keys()
-      |> Enum.uniq()
-      |> Enum.reject(&(&1 in allowed))
-
-    if unknown != [] do
-      raise ArgumentError, "unknown option(s) for OpenJTalk: #{inspect(unknown)}"
-    end
-
-    :ok
-  end
-
-  defp validate_playback_mode!(opts) do
-    case Keyword.fetch(opts, :playback_mode) do
-      :error -> :ok
-      {:ok, mode} when mode in [:auto, :file, :stdin] -> :ok
-      {:ok, bad} -> raise ArgumentError, "invalid value for :playback_mode: #{inspect(bad)}"
-    end
-  end
-
-  defp validate_timeout!(opts) do
-    case Keyword.fetch(opts, :timeout) do
-      :error -> :ok
-      {:ok, t} when is_integer(t) and t >= 0 -> :ok
-      {:ok, bad} -> raise ArgumentError, "invalid value for :timeout : #{inspect(bad)}"
-    end
-  end
+  def validate_options!(opts), do: OpenJTalk.Options.validate!(opts)
 
   @doc """
   Synthesize `text` to a WAV file.
@@ -183,7 +136,7 @@ defmodule OpenJTalk do
   @spec say(binary, [say_option()]) :: :ok | {:error, term}
   def say(text, opts \\ []) do
     opts = validate_options!(opts)
-    mode = Keyword.get(opts, :playback_mode, :auto)
+    mode = OpenJTalk.Options.playback_mode(opts)
     do_say(text, mode, opts)
   end
 
