@@ -51,6 +51,27 @@ Optional environment flags (honored by the Makefile):
 - `OPENJTALK_FULL_STATIC=1` — attempt a fully static `open_jtalk` (Linux only; requires static libstdc++)
 - `OPENJTALK_BUNDLE_ASSETS=0|1` — whether to bundle dictionary/voice into `priv/`
 
+### Maintainer build notes
+
+At compile time, `elixir_make` runs the Makefile to build the local
+`open_jtalk` command. If vendor payloads are missing, the Makefile runs
+`scripts/prepare_vendor.sh`; then `scripts/build_openjtalk.sh` builds MeCab,
+HTS Engine, and Open JTalk.
+
+Runtime files are installed under `priv/`:
+
+- `priv/bin/open_jtalk`
+- `priv/lib/`
+- `priv/dictionary/sys.dic` when `OPENJTALK_BUNDLE_ASSETS=1`
+- `priv/voices/mei_normal.htsvoice` when `OPENJTALK_BUNDLE_ASSETS=1`
+
+Native source trees are extracted under `_build/.../obj/vendor/`, not directly
+under `vendor/`, so checked-in/downloaded payloads stay separate from generated
+Autotools files.
+
+The package intentionally shells out to the `open_jtalk` command instead of
+calling C directly from the BEAM.
+
 ### Tested platforms
 
 Host builds (compile and run on the same machine):
