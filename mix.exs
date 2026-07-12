@@ -17,8 +17,13 @@ defmodule OpenJtalkElixir.MixProject do
       deps: deps(),
       package: package(),
       docs: docs(),
-      dialyzer: dialyzer(),
-      preferred_cli_env: %{
+      dialyzer: dialyzer()
+    ]
+  end
+
+  def cli do
+    [
+      preferred_envs: %{
         credo: :lint,
         dialyzer: :lint,
         docs: :docs,
