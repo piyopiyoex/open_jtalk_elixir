@@ -3,6 +3,24 @@ defmodule OpenJTalk.WavTest do
 
   @moduletag :tmp_dir
 
+  test "parse/1 skips padding after an odd-sized ignored chunk" do
+    wav = pcm_wav(<<1, 2>>, chunks_before_fmt: [chunk("JUNK", <<255>>)])
+
+    assert {:ok, parsed} = OpenJTalk.Wav.parse(wav)
+    assert parsed.data == <<1, 2>>
+  end
+
+  test "concat_binaries/1 pads odd-sized output so it parses cleanly" do
+    first = pcm_wav(<<1>>)
+    second = pcm_wav(<<2, 3>>)
+
+    assert {:ok, merged} = OpenJTalk.Wav.concat_binaries([first, second])
+    assert {:ok, parsed} = OpenJTalk.Wav.parse(merged)
+    assert parsed.data == <<1, 2, 3>>
+    assert riff_size(merged) + 8 == byte_size(merged)
+    assert :binary.last(merged) == 0
+  end
+
   defp mk_wav!(text) do
     {:ok, wav} = OpenJTalk.to_wav_binary(text)
     wav
@@ -105,4 +123,35 @@ defmodule OpenJTalk.WavTest do
     <<"RIFF", riff_size::little-32, "WAVE", "fmt ", fsize::little-32, new_fmt::binary,
       rest::binary>>
   end
+
+  defp pcm_wav(data, opts \\ []) do
+    sample_rate = Keyword.get(opts, :sample_rate, 16_000)
+    bits_per_sample = Keyword.get(opts, :bits_per_sample, 8)
+    channels = Keyword.get(opts, :channels, 1)
+    block_align = div(channels * bits_per_sample, 8)
+    byte_rate = sample_rate * block_align
+
+    fmt_body =
+      <<1::little-16, channels::little-16, sample_rate::little-32, byte_rate::little-32,
+        block_align::little-16, bits_per_sample::little-16>>
+
+    body = [
+      "WAVE",
+      Keyword.get(opts, :chunks_before_fmt, []),
+      chunk("fmt ", fmt_body),
+      chunk("data", data)
+    ]
+
+    ["RIFF", <<IO.iodata_length(body)::little-32>>, body]
+    |> IO.iodata_to_binary()
+  end
+
+  defp chunk(id, body) when byte_size(id) == 4 and is_binary(body) do
+    [id, <<byte_size(body)::little-32>>, body, padding(body)]
+  end
+
+  defp padding(body) when rem(byte_size(body), 2) == 1, do: <<0>>
+  defp padding(_body), do: <<>>
+
+  defp riff_size(<<"RIFF", size::little-32, _rest::binary>>), do: size
 end

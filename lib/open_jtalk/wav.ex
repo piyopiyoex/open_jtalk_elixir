@@ -96,13 +96,13 @@ defmodule OpenJTalk.Wav do
   # Chunk scanner: find "fmt " and "data" (ignores others).
   defp scan_chunks(<<"fmt ", size::little-32, body::binary-size(size), rest::binary>>, acc, data) do
     case parse_format(body) do
-      {:ok, format} -> scan_chunks(rest, Map.put(acc, :format, format), data)
+      {:ok, format} -> scan_chunks(skip_padding(rest, size), Map.put(acc, :format, format), data)
       {:error, _} = e -> e
     end
   end
 
   defp scan_chunks(<<"data", size::little-32, body::binary-size(size), rest::binary>>, acc, nil) do
-    scan_chunks(rest, acc, body)
+    scan_chunks(skip_padding(rest, size), acc, body)
   end
 
   # skip any other chunk
@@ -111,12 +111,15 @@ defmodule OpenJTalk.Wav do
          acc,
          data
        ),
-       do: scan_chunks(rest, acc, data)
+       do: scan_chunks(skip_padding(rest, size), acc, data)
 
   defp scan_chunks(<<>>, %{format: format}, data) when is_map(format) and is_binary(data),
     do: {:ok, format, data}
 
   defp scan_chunks(<<>>, _acc, _data), do: {:error, :missing_format_or_data}
+
+  defp skip_padding(<<_padding, rest::binary>>, size) when rem(size, 2) == 1, do: rest
+  defp skip_padding(rest, _size), do: rest
 
   defp parse_format(<<
          audio_format::little-16,
@@ -218,22 +221,27 @@ defmodule OpenJTalk.Wav do
   defp build_wav(format, data_iodata) do
     data_size = IO.iodata_length(data_iodata)
     format_chunk = encode_format(format)
-    riff_size = 4 + (8 + byte_size(format_chunk)) + (8 + data_size)
+    format_size = byte_size(format_chunk)
+    riff_size = 4 + padded_chunk_size(format_size) + padded_chunk_size(data_size)
 
     iodata = [
       "RIFF",
       <<riff_size::little-32>>,
       "WAVE",
       "fmt ",
-      <<byte_size(format_chunk)::little-32>>,
+      <<format_size::little-32>>,
       format_chunk,
+      chunk_padding(format_size),
       "data",
       <<data_size::little-32>>,
-      data_iodata
+      data_iodata,
+      chunk_padding(data_size)
     ]
 
     IO.iodata_to_binary(iodata)
   end
+
+  defp padded_chunk_size(size), do: 8 + size + padding_size(size)
 
   defp encode_format(%{
          audio_format: audio_format,
@@ -261,4 +269,10 @@ defmodule OpenJTalk.Wav do
         <<base::binary, byte_size(extra)::little-16, extra::binary>>
     end
   end
+
+  defp chunk_padding(size) when rem(size, 2) == 1, do: <<0>>
+  defp chunk_padding(_size), do: <<>>
+
+  defp padding_size(size) when rem(size, 2) == 1, do: 1
+  defp padding_size(_size), do: 0
 end
