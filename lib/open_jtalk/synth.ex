@@ -2,13 +2,12 @@ defmodule OpenJTalk.Synth do
   @moduledoc false
   # Build and run the `open_jtalk` CLI for synthesis.
 
-  alias OpenJTalk.Assets
+  alias OpenJTalk.{Assets, Command, Options}
 
   @typedoc "Use the canonical top-level synth option type."
   @type option :: OpenJTalk.synth_option()
 
   @base_alpha 0.55
-  @default_timeout 20_000
 
   @doc """
   Build the `open_jtalk` argv to synthesize into `wav_out`.
@@ -22,10 +21,10 @@ defmodule OpenJTalk.Synth do
     with {:ok, bin} <- Assets.resolve_bin(),
          {:ok, dic} <- Assets.resolve_dictionary(opts[:dictionary]),
          {:ok, voice} <- Assets.resolve_voice(opts[:voice]) do
-      alpha = clamp(@base_alpha + (opts[:timbre] || 0.0), 0.0, 1.0)
-      rate = clamp(opts[:rate] || 1.0, 0.5, 2.0)
-      fm = clamp(opts[:pitch_shift] || 0, -24, 24)
-      gain = clamp(opts[:gain] || 0, -20, 20)
+      alpha = Options.clamp(@base_alpha + (opts[:timbre] || 0.0), 0.0, 1.0)
+      rate = Options.clamp(opts[:rate] || 1.0, 0.5, 2.0)
+      fm = Options.clamp(opts[:pitch_shift] || 0, -24, 24)
+      gain = Options.clamp(opts[:gain] || 0, -20, 20)
 
       args =
         [
@@ -49,16 +48,16 @@ defmodule OpenJTalk.Synth do
   end
 
   @doc """
-  Run the `open_jtalk` command via MuonTrap.
+  Run the `open_jtalk` command via the configured command runner.
 
   Returns `{:ok, stdout}` or `{:error, {:open_jtalk_exit, status, trimmed_output}}`.
   """
   @spec run([binary], non_neg_integer() | nil) :: {:ok, binary} | {:error, term}
   def run([bin | args], timeout_ms) do
     env = [{"LC_ALL", "C"}] ++ ld_path_env()
-    timeout = normalize_timeout(timeout_ms)
+    timeout = Options.normalize_timeout(timeout_ms)
 
-    case MuonTrap.cmd(bin, args, env: env, stderr_to_stdout: true, timeout: timeout) do
+    case Command.run(bin, args, env: env, stderr_to_stdout: true, timeout: timeout) do
       {out, 0} -> {:ok, out}
       {out, status} -> {:error, {:open_jtalk_exit, status, String.trim(out)}}
     end
@@ -81,13 +80,5 @@ defmodule OpenJTalk.Synth do
     else
       []
     end
-  end
-
-  defp normalize_timeout(nil), do: @default_timeout
-  defp normalize_timeout(int) when is_integer(int) and int >= 0, do: int
-  defp normalize_timeout(_), do: @default_timeout
-
-  defp clamp(x, lo, hi) when is_number(x) and is_number(lo) and is_number(hi) do
-    x |> min(hi) |> max(lo)
   end
 end
