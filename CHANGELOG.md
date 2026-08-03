@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.3.1
+
+This patch release contains no public API changes and focuses on WAV
+correctness, maintainability, and project tooling.
+
+### Fixes
+
+- Handle padding after odd-sized RIFF chunks when parsing WAV files.
+- Pad odd-sized concatenated WAV data so the resulting RIFF size remains valid.
+
+### Improvements
+
+- Centralize shared option validation and command execution helpers.
+- Improve option types, playback documentation, and internal helper reuse.
+- Add introductory Livebook notebooks and document the native build layout.
+- Update Credo for Elixir 1.20 compatibility and strengthen CI with ShellCheck
+  and warnings-as-errors compilation.
+
 ## v0.3.0
 
 ### Breaking changes
