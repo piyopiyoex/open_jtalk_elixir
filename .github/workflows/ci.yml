@@ -33,7 +33,8 @@ jobs:
       - run: mix local.rebar --force
       - run: mix deps.get
       - run: mix format --check-formatted
-      - run: mix compile
+      - run: shellcheck -x scripts/*.sh
+      - run: mix compile --warnings-as-errors
       - run: mix dialyzer --format short
       - name: Credo (warning only)
         continue-on-error: true

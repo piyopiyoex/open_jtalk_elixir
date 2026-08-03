@@ -39,6 +39,9 @@ defmodule OpenJTalk do
           | {:dictionary, Path.t()}
           | {:timeout, non_neg_integer()}
 
+  @typedoc "Options accepted by `to_wav_file/2`."
+  @type wav_file_option :: synth_option() | {:out, Path.t()}
+
   @typedoc "Options accepted by `say/2` (synth + playback + optional `:out`)."
   @type say_option :: player_option() | synth_option() | {:out, Path.t()}
 
@@ -75,7 +78,7 @@ defmodule OpenJTalk do
   Synthesize `text` to a WAV file.
   Respects `:out` when provided; otherwise creates a unique path in the system temp dir.
   """
-  @spec to_wav_file(binary, [synth_option()]) :: {:ok, Path.t()} | {:error, term}
+  @spec to_wav_file(binary, [wav_file_option()]) :: {:ok, Path.t()} | {:error, term()}
   def to_wav_file(text, opts \\ []) when is_binary(text) do
     opts = validate_options!(opts)
     out = opts[:out] || OpenJTalk.Tempfile.tmp_path("wav")
@@ -94,7 +97,7 @@ defmodule OpenJTalk do
   end
 
   @doc "Synthesize `text` and return RIFF/WAV bytes."
-  @spec to_wav_binary(binary, [synth_option()]) :: {:ok, binary} | {:error, term}
+  @spec to_wav_binary(binary, [synth_option()]) :: {:ok, binary} | {:error, term()}
   def to_wav_binary(text, opts \\ []) when is_binary(text) do
     opts = validate_options!(opts)
 
@@ -109,19 +112,20 @@ defmodule OpenJTalk do
   end
 
   @doc """
-  Play RIFF/WAV bytes already in memory (no temp files).
+  Play RIFF/WAV bytes already in memory.
 
   Accepts the same `:playback_mode` and `:timeout` options as `say/2`.
-  Use `playback_mode: :stdin` for diskless playback when a stdin-capable player is available.
+  Use `playback_mode: :stdin` for diskless playback when a stdin-capable player is
+  available. Playback falls back to a temporary file when stdin playback is unavailable.
   """
-  @spec play_wav_binary(iodata(), [player_option()]) :: :ok | {:error, term}
+  @spec play_wav_binary(iodata(), [player_option()]) :: :ok | {:error, term()}
   def play_wav_binary(wav_bytes, opts \\ []) do
     _ = validate_options!(opts)
     OpenJTalk.Player.play_wav_binary(wav_bytes, opts)
   end
 
   @doc "Play a WAV from a file path. See `play_wav_binary/2` for options."
-  @spec play_wav_file(Path.t(), [player_option()]) :: :ok | {:error, term}
+  @spec play_wav_file(Path.t(), [player_option()]) :: :ok | {:error, term()}
   def play_wav_file(path, opts \\ []) do
     _ = validate_options!(opts)
     OpenJTalk.Player.play_wav_file(path, opts)
@@ -133,7 +137,7 @@ defmodule OpenJTalk do
   `:playback_mode` controls how playback occurs:
   - `:auto` (default) tries stdin first, then falls back to file playback.
   """
-  @spec say(binary, [say_option()]) :: :ok | {:error, term}
+  @spec say(binary, [say_option()]) :: :ok | {:error, term()}
   def say(text, opts \\ []) do
     opts = validate_options!(opts)
     mode = OpenJTalk.Options.playback_mode(opts)
@@ -158,7 +162,7 @@ defmodule OpenJTalk do
   # :auto prefers stdin path (Player will fall back to file internally as needed)
   defp do_say(text, :auto, opts), do: do_say(text, :stdin, opts)
 
-  @doc "Return useful information about the local Open J Talk setup."
+  @doc "Return useful information about the local Open JTalk setup."
   @spec info() :: {:ok, info_map()}
   def info() do
     OpenJTalk.Info.info()

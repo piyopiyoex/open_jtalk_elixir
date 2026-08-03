@@ -2,6 +2,8 @@ defmodule OpenJTalk.Player do
   @moduledoc false
   # Audio playback helpers for WAV produced by OpenJTalk.
 
+  alias OpenJTalk.{Options, Tempfile}
+
   @type playback_mode :: OpenJTalk.playback_mode()
 
   @type option :: OpenJTalk.player_option()
@@ -22,8 +24,6 @@ defmodule OpenJTalk.Player do
     {"paplay", ["-"]}
   ]
 
-  @default_timeout 20_000
-
   @doc "Returns `true` if a supported file-based player is available."
   @spec available?() :: boolean()
   def available?(), do: match?({:ok, _}, resolve_player())
@@ -42,7 +42,7 @@ defmodule OpenJTalk.Player do
   end
 
   @doc "Play a WAV from a file path."
-  @spec play_wav_file(Path.t(), [option()]) :: :ok | {:error, term}
+  @spec play_wav_file(Path.t(), [option()]) :: :ok | {:error, term()}
   def play_wav_file(path, opts \\ []) do
     case resolve_player() do
       {:ok, {cmd, args, _abs}} ->
@@ -57,12 +57,13 @@ defmodule OpenJTalk.Player do
   end
 
   @doc """
-  Play WAV bytes already in memory (no temp files).
+  Play WAV bytes already in memory.
 
   Honors `:playback_mode`. The input must be valid RIFF/WAV (as returned by
-  `OpenJTalk.to_wav_binary/2`).
+  `OpenJTalk.to_wav_binary/2`). A temporary file is used for `:file` mode and
+  as a fallback when stdin playback is unavailable.
   """
-  @spec play_wav_binary(iodata(), [option()]) :: :ok | {:error, term}
+  @spec play_wav_binary(iodata(), [option()]) :: :ok | {:error, term()}
   def play_wav_binary(wav_bytes, opts \\ []) do
     mode = Keyword.get(opts, :playback_mode, :auto)
 
@@ -101,7 +102,7 @@ defmodule OpenJTalk.Player do
   end
 
   defp play_binary_via_tempfile(bin, opts) do
-    path = tmp_path("wav")
+    path = Tempfile.tmp_path("wav")
 
     try do
       case File.write(path, bin) do
@@ -116,7 +117,7 @@ defmodule OpenJTalk.Player do
   # Standardized MuonTrap call for players (builds timeout/stderr options).
   # Optional `stdin_bin` streams WAV bytes when provided.
   defp run_player(cmd, args, opts, stdin_bin \\ nil) do
-    timeout = normalize_timeout(Keyword.get(opts, :timeout, @default_timeout))
+    timeout = Options.normalize_timeout(Keyword.get(opts, :timeout))
     base = [stderr_to_stdout: true, timeout: timeout]
     mu_opts = if is_binary(stdin_bin), do: Keyword.put(base, :stdin, stdin_bin), else: base
     MuonTrap.cmd(cmd, args, mu_opts)
@@ -139,11 +140,4 @@ defmodule OpenJTalk.Player do
       end
     end)
   end
-
-  defp tmp_path(ext),
-    do: Path.join(System.tmp_dir!(), "ojt-#{System.unique_integer([:positive])}.#{ext}")
-
-  defp normalize_timeout(nil), do: @default_timeout
-  defp normalize_timeout(int) when is_integer(int) and int >= 0, do: int
-  defp normalize_timeout(_bad), do: @default_timeout
 end

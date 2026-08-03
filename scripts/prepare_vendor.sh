@@ -8,11 +8,12 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=common.sh
+# shellcheck source=scripts/common.sh
 source "$SCRIPT_DIR/common.sh"
 
 main() {
   # Force toggle
+  # shellcheck disable=SC2034 # Read by fetch() from sourced common.sh.
   if [[ "${1:-}" == "--force" ]]; then FORCE=1; else FORCE=0; fi
 
   ensure_tools curl mkdir

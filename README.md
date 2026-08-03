@@ -219,6 +219,22 @@ OpenJTalk.Assets.reset_cache()
 How you provision those files into your image is outside the scope of this
 library.
 
+## Development
+
+Run the same checks used by CI before submitting changes:
+
+```bash
+mix format --check-formatted
+shellcheck -x scripts/*.sh
+MIX_ENV=lint mix compile --warnings-as-errors
+MIX_ENV=lint mix dialyzer --format short
+MIX_ENV=lint mix credo --all --strict --format=oneline
+mix test
+```
+
+Audio playback tests are excluded by default because they require a supported
+system player. Enable them explicitly with `OPENJTALK_AUDIO_TESTS=1 mix test`.
+
 ## Third-party components and licenses
 
 This package does not redistribute third-party assets by default.

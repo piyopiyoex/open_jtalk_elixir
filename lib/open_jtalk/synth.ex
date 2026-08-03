@@ -16,15 +16,13 @@ defmodule OpenJTalk.Synth do
   """
   @spec args(Path.t(), [option()]) :: {:ok, [binary]} | {:error, term}
   def args(wav_out, user_opts) do
-    opts = user_opts
-
     with {:ok, bin} <- Assets.resolve_bin(),
-         {:ok, dic} <- Assets.resolve_dictionary(opts[:dictionary]),
-         {:ok, voice} <- Assets.resolve_voice(opts[:voice]) do
-      alpha = Options.clamp(@base_alpha + (opts[:timbre] || 0.0), 0.0, 1.0)
-      rate = Options.clamp(opts[:rate] || 1.0, 0.5, 2.0)
-      fm = Options.clamp(opts[:pitch_shift] || 0, -24, 24)
-      gain = Options.clamp(opts[:gain] || 0, -20, 20)
+         {:ok, dic} <- Assets.resolve_dictionary(user_opts[:dictionary]),
+         {:ok, voice} <- Assets.resolve_voice(user_opts[:voice]) do
+      alpha = Options.clamp(@base_alpha + (user_opts[:timbre] || 0.0), 0.0, 1.0)
+      rate = Options.clamp(user_opts[:rate] || 1.0, 0.5, 2.0)
+      fm = Options.clamp(user_opts[:pitch_shift] || 0, -24, 24)
+      gain = Options.clamp(user_opts[:gain] || 0, -20, 20)
 
       args =
         [

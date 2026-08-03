@@ -90,7 +90,7 @@ defmodule OpenJtalkElixir.MixProject do
         "Open JTalk" => "http://open-jtalk.sourceforge.net/",
         "HTS Engine API" => "http://hts-engine.sourceforge.net/",
         "MeCab" => "https://taku910.github.io/mecab/",
-        "Open JTalk Dictionary " =>
+        "Open JTalk Dictionary" =>
           "https://sourceforge.net/projects/open-jtalk/files/Dictionary/",
         "MMDAgent Example (Mei voice)" =>
           "https://sourceforge.net/projects/mmdagent/files/MMDAgent_Example/"
