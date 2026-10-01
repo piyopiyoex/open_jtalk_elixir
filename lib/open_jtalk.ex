@@ -37,7 +37,7 @@ defmodule OpenJTalk do
           | {:gain, gain()}
           | {:voice, Path.t()}
           | {:dictionary, Path.t()}
-          | {:timeout, non_neg_integer()}
+          | {:timeout, pos_integer()}
 
   @typedoc "Options accepted by `to_wav_file/2`."
   @type wav_file_option :: synth_option() | {:out, Path.t()}
