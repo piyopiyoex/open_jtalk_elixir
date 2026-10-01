@@ -19,16 +19,16 @@ jobs:
       - uses: actions/checkout@v4
       - uses: erlef/setup-beam@v1
         with:
-          elixir-version: '1.18'
-          otp-version: '27'
+          elixir-version: '1.19'
+          otp-version: '28'
       - name: Mix cache
         uses: actions/cache@v4
         with:
           path: |
             ~/.mix
             deps
-            _build
-          key: mix-${{ runner.os }}-${{ hashFiles('**/mix.lock') }}
+            _build/lint
+          key: mix-lint-${{ runner.os }}-ex1.19-otp28-${{ hashFiles('**/mix.lock') }}
       - run: mix local.hex --force
       - run: mix local.rebar --force
       - run: mix deps.get
@@ -36,18 +36,28 @@ jobs:
       - run: shellcheck -x scripts/*.sh
       - run: mix compile --warnings-as-errors
       - run: mix dialyzer --format short
-      - name: Credo (warning only)
-        continue-on-error: true
-        run: mix credo --all --strict --format=oneline
+      - run: mix credo --all --strict --format=oneline
 
   test:
-    name: test (${{ matrix.os }})
+    name: test (${{ matrix.os }}, Elixir ${{ matrix.elixir }}, OTP ${{ matrix.otp }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, ubuntu-24.04-arm, macos-14]
+        include:
+          - os: ubuntu-24.04
+            elixir: '1.15.8'
+            otp: '26.2'
+          - os: ubuntu-24.04
+            elixir: '1.19'
+            otp: '28'
+          - os: ubuntu-24.04-arm
+            elixir: '1.19'
+            otp: '28'
+          - os: macos-14
+            elixir: '1.19'
+            otp: '28'
     env:
       MIX_ENV: test
       OPENJTALK_BUNDLE_ASSETS: "1"  # ensure dic/voice exist for tests
@@ -62,21 +72,15 @@ jobs:
             build-essential curl tar unzip automake
       - uses: erlef/setup-beam@v1
         with:
-          elixir-version: '1.18'
-          otp-version: '27'
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
       - name: Cache mix
         uses: actions/cache@v4
         with:
           path: |
             ~/.mix
             deps
-            _build
-          key: mix-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/mix.lock') }}
-      - name: Cache vendor downloads
-        uses: actions/cache@v4
-        with:
-          path: vendor
-          key: vendor-${{ runner.os }}-${{ runner.arch }}-openjtalk-${{ hashFiles('VENDOR') }}
+          key: mix-test-${{ runner.os }}-${{ runner.arch }}-ex${{ matrix.elixir }}-otp${{ matrix.otp }}-${{ hashFiles('**/mix.lock') }}
       - run: mix local.hex --force
       - run: mix local.rebar --force
       - run: mix deps.get
@@ -100,21 +104,15 @@ jobs:
             gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf
       - uses: erlef/setup-beam@v1
         with:
-          elixir-version: '1.18'
-          otp-version: '27'
+          elixir-version: '1.19'
+          otp-version: '28'
       - name: Cache mix
         uses: actions/cache@v4
         with:
           path: |
             ~/.mix
             deps
-            _build
-          key: mix-${{ runner.os }}-armhf-${{ hashFiles('**/mix.lock') }}
-      - name: Cache vendor downloads
-        uses: actions/cache@v4
-        with:
-          path: vendor
-          key: vendor-${{ runner.os }}-armhf-openjtalk-${{ hashFiles('VENDOR') }}
+          key: mix-cross-${{ runner.os }}-armhf-ex1.19-otp28-${{ hashFiles('**/mix.lock') }}
       - run: mix local.hex --force
       - run: mix local.rebar --force
       - run: mix deps.get
@@ -136,3 +134,39 @@ jobs:
           test -n "$BIN"
           file "$BIN"
           file "$BIN" | grep -Ei 'aarch64|ARM' >/dev/null
+
+  package:
+    name: Hex package smoke test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      MIX_ENV: docs
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential curl tar unzip automake
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: '1.19'
+          otp-version: '28'
+      - run: mix local.hex --force
+      - run: mix local.rebar --force
+      - run: mix deps.get
+      - name: Build and inspect package
+        run: |
+          mix hex.build --unpack --output /tmp/open_jtalk-package
+          test -f /tmp/open_jtalk-package/Makefile
+          test -f /tmp/open_jtalk-package/vendor/config/config.sub
+          test ! -e /tmp/open_jtalk-package/vendor/open_jtalk-1.11.tar.gz
+      - name: Compile unpacked package
+        working-directory: /tmp/open_jtalk-package
+        env:
+          MIX_ENV: test
+          OPENJTALK_BUNDLE_ASSETS: "0"
+          OPENJTALK_FULL_STATIC: "0"
+        run: |
+          mix deps.get
+          mix compile --warnings-as-errors
