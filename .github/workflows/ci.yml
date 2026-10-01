@@ -88,10 +88,11 @@ jobs:
       - run: mix test
 
   cross-rpi4:
-    name: cross rpi4
+    name: cross rpi4 (aarch64)
     runs-on: ubuntu-24.04
     env:
       MIX_ENV: test
+      MIX_TARGET: rpi4
       OPENJTALK_BUNDLE_ASSETS: "0"
       OPENJTALK_FULL_STATIC: "0"
     steps:
@@ -101,7 +102,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             build-essential automake curl tar unzip file \
-            gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf
+            gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
       - uses: erlef/setup-beam@v1
         with:
           elixir-version: '1.19'
@@ -112,28 +113,28 @@ jobs:
           path: |
             ~/.mix
             deps
-          key: mix-cross-${{ runner.os }}-armhf-ex1.19-otp28-${{ hashFiles('**/mix.lock') }}
+          key: mix-cross-${{ runner.os }}-aarch64-ex1.19-otp28-${{ hashFiles('**/mix.lock') }}
       - run: mix local.hex --force
       - run: mix local.rebar --force
       - run: mix deps.get
-      - name: Compile for ARMv7 (rpi4-like)
+      - name: Compile for aarch64 RPi 4
         env:
-          CC: arm-linux-gnueabihf-gcc
-          CXX: arm-linux-gnueabihf-g++
-          AR: arm-linux-gnueabihf-ar
-          RANLIB: arm-linux-gnueabihf-ranlib
-          STRIP: arm-linux-gnueabihf-strip
+          CC: aarch64-linux-gnu-gcc
+          CXX: aarch64-linux-gnu-g++
+          AR: aarch64-linux-gnu-ar
+          RANLIB: aarch64-linux-gnu-ranlib
+          STRIP: aarch64-linux-gnu-strip
         run: |
           mix compile
           # Show what the compiler thinks the host is (useful for logs)
-          arm-linux-gnueabihf-gcc -dumpmachine
-      - name: Verify binary is ARM
+          aarch64-linux-gnu-gcc -dumpmachine
+      - name: Verify binary is aarch64
         run: |
           set -euo pipefail
           BIN="$(find _build -type f -name open_jtalk -path '*/priv/bin/*' | head -n1)"
           test -n "$BIN"
           file "$BIN"
-          file "$BIN" | grep -Ei 'aarch64|ARM' >/dev/null
+          file "$BIN" | grep -F 'ARM aarch64' >/dev/null
 
   package:
     name: Hex package smoke test
