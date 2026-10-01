@@ -29,9 +29,11 @@ defmodule OpenJTalk.ValidationTest do
     end
   end
 
-  test "validate_options!/1 rejects negative :timeout" do
-    assert_raise ArgumentError, ~r/invalid value for :timeout/, fn ->
-      OpenJTalk.validate_options!(timeout: -1)
+  test "validate_options!/1 rejects non-positive :timeout" do
+    for timeout <- [-1, 0] do
+      assert_raise ArgumentError, ~r/invalid value for :timeout/, fn ->
+        OpenJTalk.validate_options!(timeout: timeout)
+      end
     end
   end
 end

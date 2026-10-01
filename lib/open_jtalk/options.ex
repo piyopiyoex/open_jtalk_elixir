@@ -39,9 +39,9 @@ defmodule OpenJTalk.Options do
   def playback_mode(opts), do: Keyword.get(opts, :playback_mode, :auto)
 
   @doc "Normalize a timeout value to the default when it is absent or invalid."
-  @spec normalize_timeout(term()) :: non_neg_integer()
+  @spec normalize_timeout(term()) :: pos_integer()
   def normalize_timeout(nil), do: @default_timeout
-  def normalize_timeout(value) when is_integer(value) and value >= 0, do: value
+  def normalize_timeout(value) when is_integer(value) and value > 0, do: value
   def normalize_timeout(_value), do: @default_timeout
 
   @doc "Clamp a numeric value between lower and upper bounds."
@@ -76,7 +76,7 @@ defmodule OpenJTalk.Options do
   defp validate_timeout!(opts) do
     case Keyword.fetch(opts, :timeout) do
       :error -> :ok
-      {:ok, timeout} when is_integer(timeout) and timeout >= 0 -> :ok
+      {:ok, timeout} when is_integer(timeout) and timeout > 0 -> :ok
       {:ok, bad} -> raise ArgumentError, "invalid value for :timeout: #{inspect(bad)}"
     end
   end

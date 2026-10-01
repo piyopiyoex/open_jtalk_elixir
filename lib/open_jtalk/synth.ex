@@ -50,7 +50,7 @@ defmodule OpenJTalk.Synth do
 
   Returns `{:ok, stdout}` or `{:error, {:open_jtalk_exit, status, trimmed_output}}`.
   """
-  @spec run([binary], non_neg_integer() | nil) :: {:ok, binary} | {:error, term}
+  @spec run([binary], pos_integer() | nil) :: {:ok, binary} | {:error, term}
   def run([bin | args], timeout_ms) do
     env = [{"LC_ALL", "C"}] ++ ld_path_env()
     timeout = Options.normalize_timeout(timeout_ms)

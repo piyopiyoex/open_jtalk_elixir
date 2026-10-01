@@ -23,8 +23,10 @@ defmodule OpenJTalk.OptionsTest do
   end
 
   test "validate!/1 rejects invalid timeout" do
-    assert_raise ArgumentError, "invalid value for :timeout: -1", fn ->
-      Options.validate!(timeout: -1)
+    for timeout <- [-1, 0] do
+      assert_raise ArgumentError, "invalid value for :timeout: #{timeout}", fn ->
+        Options.validate!(timeout: timeout)
+      end
     end
   end
 
@@ -42,7 +44,7 @@ defmodule OpenJTalk.OptionsTest do
   test "normalize_timeout/1 defaults absent or invalid values" do
     assert Options.normalize_timeout(nil) == 20_000
     assert Options.normalize_timeout(:bad) == 20_000
-    assert Options.normalize_timeout(0) == 0
+    assert Options.normalize_timeout(0) == 20_000
     assert Options.normalize_timeout(123) == 123
   end
 

@@ -26,7 +26,7 @@ defmodule OpenJTalk do
 
   @typedoc "Options accepted by playback functions."
   @type player_option ::
-          {:timeout, non_neg_integer()}
+          {:timeout, pos_integer()}
           | {:playback_mode, playback_mode()}
 
   @typedoc "Options accepted by synthesis functions."
@@ -67,7 +67,7 @@ defmodule OpenJTalk do
   Enforcement:
     * Unknown keys raise `ArgumentError`
     * `:playback_mode` must be one of `:auto | :file | :stdin` (if present)
-    * `:timeout` must be a non-negative integer (if present)
+    * `:timeout` must be a positive integer (if present)
 
   Returns the original `opts` on success.
   """
