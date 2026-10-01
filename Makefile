@@ -94,9 +94,34 @@ CONFIG_SUB ?= $(CURDIR)/vendor/config/config.sub
 # ------------------------------------------------------------------------------
 # Verified vendor readiness check (used as an order-only prerequisite)
 # ------------------------------------------------------------------------------
+VENDOR_DIR := $(CURDIR)/vendor
+VENDOR_PAYLOADS := \
+  $(VENDOR_DIR)/config/config.sub \
+  $(VENDOR_DIR)/config/config.guess \
+  $(VENDOR_DIR)/mecab-0.996.tar.gz \
+  $(VENDOR_DIR)/hts_engine_API-1.10.tar.gz \
+  $(VENDOR_DIR)/open_jtalk-1.11.tar.gz \
+  $(VENDOR_DIR)/open_jtalk_dic_utf_8-1.11.tar.gz \
+  $(VENDOR_DIR)/MMDAgent_Example-1.8.zip
+
+NATIVE_BUILD_INPUTS := \
+  Makefile \
+  $(SCRIPT_DIR)/build_openjtalk.sh \
+  $(SCRIPT_DIR)/common.sh \
+  $(VENDOR_DIR)/config/config.sub \
+  $(VENDOR_DIR)/config/config.guess \
+  $(MECAB_TGZ) \
+  $(HTS_TGZ) \
+  $(OJT_TGZ)
+
 .PHONY: vendor_ready
 vendor_ready:
 	@/usr/bin/env bash "$(SCRIPT_DIR)/prepare_vendor.sh"
+
+# Missing payloads are created by vendor_ready. Declaring this relationship lets
+# the real build targets use the payloads as ordinary timestamp prerequisites.
+$(VENDOR_PAYLOADS): | vendor_ready
+	@test -f "$@"
 
 # ------------------------------------------------------------------------------
 # Targets
@@ -119,8 +144,9 @@ show-config-sub:
 # - triplet guard (purges obj on host change)
 # - vendor extraction
 # - dependency + open_jtalk build
-$(PRIV_DIR)/bin/open_jtalk: | $(OBJ_DIR) $(PRIV_DIR)/bin $(PRIV_DIR)/lib vendor_ready
+$(PRIV_DIR)/bin/open_jtalk: $(NATIVE_BUILD_INPUTS) | $(OBJ_DIR) $(PRIV_DIR)/bin $(PRIV_DIR)/lib
 	+@echo "Building Open JTalk"; \
+	  rm -rf "$(OBJ_VENDOR)" "$(OJT_DEPS_PREFIX)" "$(OJT_PREFIX)"; \
 	  OBJ_DIR="$(OBJ_DIR)" OBJ_VENDOR="$(OBJ_VENDOR)" \
 	  MECAB_TGZ="$(MECAB_TGZ)" HTS_TGZ="$(HTS_TGZ)" OJT_TGZ="$(OJT_TGZ)" \
 	  MECAB_SRC="$(MECAB_SRC)" HTS_SRC="$(HTS_SRC)" OJT_SRC="$(OJT_SRC)" \
@@ -131,11 +157,11 @@ $(PRIV_DIR)/bin/open_jtalk: | $(OBJ_DIR) $(PRIV_DIR)/bin $(PRIV_DIR)/lib vendor_
 	  /usr/bin/env bash "$(SCRIPT_DIR)/build_openjtalk.sh"
 
 # Assets: install pinned dictionary & one voice
-$(PRIV_DIR)/dictionary/sys.dic: | vendor_ready $(PRIV_DIR)/dictionary
+$(PRIV_DIR)/dictionary/sys.dic: $(DIC_TGZ) $(SCRIPT_DIR)/install_dictionary.sh $(SCRIPT_DIR)/common.sh | $(PRIV_DIR)/dictionary
 	+@DIC_TGZ="$(DIC_TGZ)" DEST_DIR="$(PRIV_DIR)/dictionary" \
 	  /usr/bin/env bash "$(SCRIPT_DIR)/install_dictionary.sh"
 
-$(PRIV_DIR)/voices/mei_normal.htsvoice: | vendor_ready $(PRIV_DIR)/voices
+$(PRIV_DIR)/voices/mei_normal.htsvoice: $(MEI_ZIP) $(SCRIPT_DIR)/install_voice.sh $(SCRIPT_DIR)/common.sh | $(PRIV_DIR)/voices
 	+@VOICE_ZIP="$(MEI_ZIP)" DEST_VOICE="$(PRIV_DIR)/voices/mei_normal.htsvoice" \
 	  /usr/bin/env bash "$(SCRIPT_DIR)/install_voice.sh"
 
