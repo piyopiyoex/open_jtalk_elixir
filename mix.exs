@@ -66,7 +66,7 @@ defmodule OpenJtalkElixir.MixProject do
   defp docs do
     [
       main: "readme",
-      extras: ["README.md"],
+      extras: ["README.md", "RELEASE.md"],
       source_ref: "v#{@version}",
       source_url: @source_url
     ]
@@ -81,6 +81,7 @@ defmodule OpenJtalkElixir.MixProject do
         "mix.exs",
         "vendor/config",
         "CHANGELOG*",
+        "RELEASE.md",
         "README*",
         "LICENSE*"
       ],

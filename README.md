@@ -41,6 +41,11 @@ and Open JTalk. By default it also downloads and bundles a UTF-8 dictionary
 and a Mei voice into `priv/` (you can turn this off with
 `OPENJTALK_BUNDLE_ASSETS=0`).
 
+Hex releases do not contain the upstream source and asset archives, so the
+first compile normally requires outbound HTTPS access to SourceForge and
+Debian mirrors. Subsequent builds reuse the downloaded archives and native
+outputs.
+
 ### Build requirements
 
 You’ll need common build tools: `gcc`/`g++`, `make`, `curl`, `tar`, `unzip`.
@@ -83,6 +88,11 @@ Host builds (compile and run on the same machine):
 Cross-compile (host → target):
 
 - Linux x86_64 → Nerves rpi4 (aarch64)
+
+The Mix project supports Elixir 1.15 and later. CI exercises the lower bound
+with Elixir 1.15/OTP 26 and the current project baseline with Elixir 1.19/OTP
+28. Other compatible Elixir/OTP combinations may work but are not part of the
+CI matrix.
 
 ## Quick start
 
@@ -153,6 +163,40 @@ cached paths:
 ```elixir
 OpenJTalk.Assets.reset_cache()
 ```
+
+## Errors and troubleshooting
+
+Invalid options raise `ArgumentError`; failures involving the filesystem,
+native command, WAV input, or audio player return `{:error, reason}`. This
+keeps programmer mistakes distinct from runtime failures:
+
+```elixir
+OpenJTalk.play_wav_binary(wav, playback_mode: :stream)
+# ** (ArgumentError) ...
+
+{:error, {:dictionary_missing, searched_path}} =
+  OpenJTalk.to_wav_binary("こんにちは", dictionary: "/missing/dictionary")
+```
+
+Common runtime reasons include:
+
+- `{:binary_missing, searched_paths}`, `{:dictionary_missing, path}`, or
+  `{:voice_missing, path}` when an Open JTalk component cannot be resolved
+- `{:open_jtalk_exit, status, output}` when synthesis exits unsuccessfully;
+  `status` can be `:timeout`
+- `:no_player_found` or `{:player_failed, status, output}` for playback
+- `{:parse_failed, index, reason}` for invalid WAV input during concatenation
+
+Useful diagnostic steps:
+
+1. Run `OpenJTalk.info/0` to see the resolved CLI, dictionary, voice, and audio
+   player paths.
+2. Check the `OPENJTALK_CLI`, `OPENJTALK_DICTIONARY_DIR`, and
+   `OPENJTALK_VOICE` overrides, then reset the asset cache as shown above.
+3. If an initial download or extraction was interrupted, run
+   `scripts/prepare_vendor.sh --force` and compile again.
+4. If synthesis works but `say/2` does not, verify that `aplay`, `paplay`,
+   `afplay`, or SoX `play` is installed and usable by the application user.
 
 ## Using with Nerves
 
@@ -234,6 +278,9 @@ mix test
 
 Audio playback tests are excluded by default because they require a supported
 system player. Enable them explicitly with `OPENJTALK_AUDIO_TESTS=1 mix test`.
+
+Maintainers can follow [RELEASE.md](RELEASE.md) for the package verification
+and publishing sequence.
 
 ## Third-party components and licenses
 
