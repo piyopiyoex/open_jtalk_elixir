@@ -92,30 +92,11 @@ OPENJTALK_BUNDLE_ASSETS ?= 1
 CONFIG_SUB ?= $(CURDIR)/vendor/config/config.sub
 
 # ------------------------------------------------------------------------------
-# Minimal vendor readiness check (used as an order-only prerequisite)
+# Verified vendor readiness check (used as an order-only prerequisite)
 # ------------------------------------------------------------------------------
-VENDOR_DIR := $(CURDIR)/vendor
-VENDOR_PAYLOADS := \
-  $(VENDOR_DIR)/config/config.sub \
-  $(VENDOR_DIR)/config/config.guess \
-  $(VENDOR_DIR)/mecab-0.996.tar.gz \
-  $(VENDOR_DIR)/hts_engine_API-1.10.tar.gz \
-  $(VENDOR_DIR)/open_jtalk-1.11.tar.gz \
-  $(VENDOR_DIR)/open_jtalk_dic_utf_8-1.11.tar.gz \
-  $(VENDOR_DIR)/MMDAgent_Example-1.8.zip
-
 .PHONY: vendor_ready
 vendor_ready:
-	@missing=; \
-	for f in $(VENDOR_PAYLOADS); do \
-	  if [ ! -f $$f ]; then echo "missing: $$f"; missing=1; fi; \
-	done; \
-	if [ -n "$$missing" ]; then \
-	  echo "Preparing vendor payloads..."; \
-	  /usr/bin/env bash "$(SCRIPT_DIR)/prepare_vendor.sh"; \
-	else \
-	  echo "vendor looks ready."; \
-	fi
+	@/usr/bin/env bash "$(SCRIPT_DIR)/prepare_vendor.sh"
 
 # ------------------------------------------------------------------------------
 # Targets
@@ -180,4 +161,3 @@ distclean: clean
 ifeq ($(strip $(CROSSCOMPILE)),)
   $(warning No cross-compiler detected. Building native code in test mode.)
 endif
-
