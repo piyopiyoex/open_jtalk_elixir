@@ -8,7 +8,7 @@ defmodule OpenJTalk.Command do
   #
   # where `MyRunner.cmd/3` has the same shape as `MuonTrap.cmd/3`.
 
-  @spec run(binary(), [binary()], keyword()) :: {binary(), non_neg_integer()}
+  @spec run(binary(), [binary()], keyword()) :: {binary(), non_neg_integer() | :timeout}
   def run(command, args, opts \\ [])
       when is_binary(command) and is_list(args) and is_list(opts) do
     command_runner().cmd(command, args, opts)
