@@ -14,11 +14,12 @@ PRIV_DIR   := $(abspath $(MIX_COMPILE_PATH)/../priv)
 OBJ_DIR    := $(abspath $(MIX_COMPILE_PATH)/../obj)
 OBJ_VENDOR := $(abspath $(OBJ_DIR)/vendor)
 SCRIPT_DIR := $(abspath $(CURDIR)/scripts)
+VENDOR_DIR := $(abspath $(CURDIR)/vendor)
 
 # Pinned source archives committed in the repo (reproducible builds)
-MECAB_TGZ := vendor/mecab-0.996.tar.gz
-HTS_TGZ   := vendor/hts_engine_API-1.10.tar.gz
-OJT_TGZ   := vendor/open_jtalk-1.11.tar.gz
+MECAB_TGZ := $(VENDOR_DIR)/mecab-0.996.tar.gz
+HTS_TGZ   := $(VENDOR_DIR)/hts_engine_API-1.10.tar.gz
+OJT_TGZ   := $(VENDOR_DIR)/open_jtalk-1.11.tar.gz
 
 # Fixed extracted source locations (we assume the top-level dir names)
 MECAB_SRC := $(OBJ_VENDOR)/mecab/mecab-0.996
@@ -26,8 +27,8 @@ HTS_SRC   := $(OBJ_VENDOR)/hts_engine/hts_engine_API-1.10
 OJT_SRC   := $(OBJ_VENDOR)/open_jtalk/open_jtalk-1.11
 
 # Assets (dictionary + one voice for out-of-the-box usage)
-DIC_TGZ := vendor/open_jtalk_dic_utf_8-1.11.tar.gz
-MEI_ZIP := vendor/MMDAgent_Example-1.8.zip
+DIC_TGZ := $(VENDOR_DIR)/open_jtalk_dic_utf_8-1.11.tar.gz
+MEI_ZIP := $(VENDOR_DIR)/MMDAgent_Example-1.8.zip
 
 # Toolchain (honor CROSSCOMPILE if provided)
 CROSSCOMPILE ?=
@@ -94,15 +95,14 @@ CONFIG_SUB ?= $(CURDIR)/vendor/config/config.sub
 # ------------------------------------------------------------------------------
 # Verified vendor readiness check (used as an order-only prerequisite)
 # ------------------------------------------------------------------------------
-VENDOR_DIR := $(CURDIR)/vendor
 VENDOR_PAYLOADS := \
   $(VENDOR_DIR)/config/config.sub \
   $(VENDOR_DIR)/config/config.guess \
-  $(VENDOR_DIR)/mecab-0.996.tar.gz \
-  $(VENDOR_DIR)/hts_engine_API-1.10.tar.gz \
-  $(VENDOR_DIR)/open_jtalk-1.11.tar.gz \
-  $(VENDOR_DIR)/open_jtalk_dic_utf_8-1.11.tar.gz \
-  $(VENDOR_DIR)/MMDAgent_Example-1.8.zip
+  $(MECAB_TGZ) \
+  $(HTS_TGZ) \
+  $(OJT_TGZ) \
+  $(DIC_TGZ) \
+  $(MEI_ZIP)
 
 NATIVE_BUILD_INPUTS := \
   Makefile \
