@@ -69,6 +69,32 @@ defmodule OpenJTalk.WavTest do
     assert {:error, :inconsistent_format} = OpenJTalk.Wav.concat_binaries([a, b])
   end
 
+  test "parse/1 rejects a mismatched RIFF size" do
+    <<"RIFF", size::little-32, rest::binary>> = pcm_wav(<<1, 2>>)
+
+    assert {:error, :invalid_riff_size} =
+             OpenJTalk.Wav.parse(<<"RIFF", size + 1::little-32, rest::binary>>)
+  end
+
+  test "parse/1 returns errors for truncated chunks and format extras" do
+    truncated_chunk = <<"RIFF", 9::little-32, "WAVE", "JUNK", 1>>
+
+    malformed_format =
+      pcm_wav(<<1, 2>>, format_extra: <<1>>)
+
+    assert {:error, :malformed_chunk} = OpenJTalk.Wav.parse(truncated_chunk)
+    assert {:error, :unsupported_or_malformed_format} = OpenJTalk.Wav.parse(malformed_format)
+  end
+
+  test "parse/1 rejects missing padding after an odd-sized chunk" do
+    wav = pcm_wav(<<1>>)
+    unpadded = binary_part(wav, 0, byte_size(wav) - 1)
+    <<"RIFF", _size::little-32, rest::binary>> = unpadded
+    unpadded = <<"RIFF", byte_size(rest)::little-32, rest::binary>>
+
+    assert {:error, :missing_chunk_padding} = OpenJTalk.Wav.parse(unpadded)
+  end
+
   @tag :audio
   test "concatenated WAV can be played (stdin preferred, file fallback)", %{tmp_dir: tmp} do
     a = mk_wav!("これは一つ目。")
@@ -133,7 +159,8 @@ defmodule OpenJTalk.WavTest do
 
     fmt_body =
       <<1::little-16, channels::little-16, sample_rate::little-32, byte_rate::little-32,
-        block_align::little-16, bits_per_sample::little-16>>
+        block_align::little-16, bits_per_sample::little-16,
+        Keyword.get(opts, :format_extra, <<>>)::binary>>
 
     body = [
       "WAVE",

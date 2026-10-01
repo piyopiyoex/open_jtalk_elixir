@@ -55,10 +55,14 @@ defmodule OpenJTalk.Wav do
 
   @doc false
   @spec parse(binary) :: {:ok, %{format: format, data: binary}} | {:error, term}
-  def parse(<<"RIFF", _riff_size::little-32, "WAVE", rest::binary>>) do
-    case scan_chunks(rest, %{}, nil) do
-      {:ok, format, data} -> {:ok, %{format: format, data: data}}
-      {:error, _} = e -> e
+  def parse(<<"RIFF", riff_size::little-32, "WAVE", rest::binary>>) do
+    if riff_size == byte_size(rest) + 4 do
+      case scan_chunks(rest, %{}, nil) do
+        {:ok, format, data} -> {:ok, %{format: format, data: data}}
+        {:error, _} = e -> e
+      end
+    else
+      {:error, :invalid_riff_size}
     end
   end
 
@@ -95,14 +99,16 @@ defmodule OpenJTalk.Wav do
 
   # Chunk scanner: find "fmt " and "data" (ignores others).
   defp scan_chunks(<<"fmt ", size::little-32, body::binary-size(size), rest::binary>>, acc, data) do
-    case parse_format(body) do
-      {:ok, format} -> scan_chunks(skip_padding(rest, size), Map.put(acc, :format, format), data)
-      {:error, _} = e -> e
+    with {:ok, format} <- parse_format(body),
+         {:ok, rest} <- skip_padding(rest, size) do
+      scan_chunks(rest, Map.put(acc, :format, format), data)
     end
   end
 
   defp scan_chunks(<<"data", size::little-32, body::binary-size(size), rest::binary>>, acc, nil) do
-    scan_chunks(skip_padding(rest, size), acc, body)
+    with {:ok, rest} <- skip_padding(rest, size) do
+      scan_chunks(rest, acc, body)
+    end
   end
 
   # skip any other chunk
@@ -110,16 +116,25 @@ defmodule OpenJTalk.Wav do
          <<_id::binary-4, size::little-32, _skip::binary-size(size), rest::binary>>,
          acc,
          data
-       ),
-       do: scan_chunks(skip_padding(rest, size), acc, data)
+       ) do
+    with {:ok, rest} <- skip_padding(rest, size) do
+      scan_chunks(rest, acc, data)
+    end
+  end
 
   defp scan_chunks(<<>>, %{format: format}, data) when is_map(format) and is_binary(data),
     do: {:ok, format, data}
 
   defp scan_chunks(<<>>, _acc, _data), do: {:error, :missing_format_or_data}
+  defp scan_chunks(_malformed, _acc, _data), do: {:error, :malformed_chunk}
 
-  defp skip_padding(<<_padding, rest::binary>>, size) when rem(size, 2) == 1, do: rest
-  defp skip_padding(rest, _size), do: rest
+  defp skip_padding(<<_padding, rest::binary>>, size) when rem(size, 2) == 1,
+    do: {:ok, rest}
+
+  defp skip_padding(<<>>, size) when rem(size, 2) == 1,
+    do: {:error, :missing_chunk_padding}
+
+  defp skip_padding(rest, _size), do: {:ok, rest}
 
   defp parse_format(<<
          audio_format::little-16,
@@ -131,27 +146,29 @@ defmodule OpenJTalk.Wav do
          rest::binary
        >>)
        when audio_format in [1, 3] do
-    extra =
-      case rest do
-        # cbSize == 0 (or absent)
-        <<0::little-16, _::binary>> -> <<>>
-        <<cb::little-16, extra::binary-size(cb), _tail::binary>> -> extra
-        <<>> -> <<>>
-      end
-
-    {:ok,
-     %{
-       audio_format: audio_format,
-       channels: channels,
-       sample_rate: sample_rate,
-       byte_rate: byte_rate,
-       block_align: block_align,
-       bits_per_sample: bits_per_sample,
-       extra: extra
-     }}
+    with {:ok, extra} <- parse_format_extra(rest) do
+      {:ok,
+       %{
+         audio_format: audio_format,
+         channels: channels,
+         sample_rate: sample_rate,
+         byte_rate: byte_rate,
+         block_align: block_align,
+         bits_per_sample: bits_per_sample,
+         extra: extra
+       }}
+    end
   end
 
   defp parse_format(_), do: {:error, :unsupported_or_malformed_format}
+
+  defp parse_format_extra(<<>>), do: {:ok, <<>>}
+  defp parse_format_extra(<<0::little-16>>), do: {:ok, <<>>}
+
+  defp parse_format_extra(<<size::little-16, extra::binary-size(size)>>),
+    do: {:ok, extra}
+
+  defp parse_format_extra(_), do: {:error, :unsupported_or_malformed_format}
 
   # Verify each parsed header’s internal consistency & all formats match.
   defp ensure_same_format([]), do: {:error, :empty_input}
