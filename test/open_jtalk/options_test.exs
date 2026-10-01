@@ -30,6 +30,34 @@ defmodule OpenJTalk.OptionsTest do
     end
   end
 
+  test "validate!/1 rejects invalid option value types" do
+    for {key, value} <- [
+          timbre: :warm,
+          pitch_shift: 1.5,
+          rate: :fast,
+          gain: "loud",
+          voice: 123,
+          dictionary: 123,
+          out: 123
+        ] do
+      assert_raise ArgumentError, ~r/invalid value for #{inspect(key)}/, fn ->
+        Options.validate!([{key, value}])
+      end
+    end
+  end
+
+  test "validate_for!/2 rejects options outside the function context" do
+    assert_raise ArgumentError, "invalid option(s) for player: [:voice]", fn ->
+      Options.validate_for!([voice: "/tmp/voice.htsvoice"], :player)
+    end
+
+    assert_raise ArgumentError, "invalid option(s) for synth: [:out]", fn ->
+      Options.validate_for!([out: "/tmp/out.wav"], :synth)
+    end
+
+    assert Options.validate_for!([out: "/tmp/out.wav", playback_mode: :file], :say)
+  end
+
   test "validate!/1 rejects non-keyword options" do
     assert_raise ArgumentError, "OpenJTalk options must be a keyword list", fn ->
       Options.validate!([:not_a_keyword])
