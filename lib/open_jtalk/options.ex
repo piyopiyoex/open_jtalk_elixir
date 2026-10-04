@@ -17,13 +17,21 @@ defmodule OpenJTalk.Options do
   @playback_modes [:auto, :file, :stdin]
   @default_timeout 20_000
 
+  @synth_keys [:timbre, :pitch_shift, :rate, :gain, :voice, :dictionary, :timeout]
+  @player_keys [:timeout, :playback_mode]
+  @context_keys %{
+    synth: @synth_keys,
+    wav_file: [:out | @synth_keys],
+    player: @player_keys,
+    say: Enum.uniq(@synth_keys ++ @player_keys)
+  }
+
   @doc "Validate options for synthesis and playback. Returns the original options."
   @spec validate!(keyword()) :: keyword()
   def validate!(opts) when is_list(opts) do
     if Keyword.keyword?(opts) do
       check_known_keys!(opts)
-      validate_playback_mode!(opts)
-      validate_timeout!(opts)
+      validate_values!(opts)
       opts
     else
       raise ArgumentError, "OpenJTalk options must be a keyword list"
@@ -34,14 +42,22 @@ defmodule OpenJTalk.Options do
     raise ArgumentError, "OpenJTalk options must be a keyword list"
   end
 
+  @doc false
+  @spec validate_for!(keyword(), :synth | :wav_file | :player | :say) :: keyword()
+  def validate_for!(opts, context) when is_map_key(@context_keys, context) do
+    opts = validate!(opts)
+    check_allowed_keys!(opts, Map.fetch!(@context_keys, context), context)
+    opts
+  end
+
   @doc "Return the requested playback mode, defaulting to `:auto`."
   @spec playback_mode(keyword()) :: OpenJTalk.playback_mode()
   def playback_mode(opts), do: Keyword.get(opts, :playback_mode, :auto)
 
   @doc "Normalize a timeout value to the default when it is absent or invalid."
-  @spec normalize_timeout(term()) :: non_neg_integer()
+  @spec normalize_timeout(term()) :: pos_integer()
   def normalize_timeout(nil), do: @default_timeout
-  def normalize_timeout(value) when is_integer(value) and value >= 0, do: value
+  def normalize_timeout(value) when is_integer(value) and value > 0, do: value
   def normalize_timeout(_value), do: @default_timeout
 
   @doc "Clamp a numeric value between lower and upper bounds."
@@ -65,19 +81,24 @@ defmodule OpenJTalk.Options do
     :ok
   end
 
-  defp validate_playback_mode!(opts) do
-    case Keyword.fetch(opts, :playback_mode) do
-      :error -> :ok
-      {:ok, mode} when mode in @playback_modes -> :ok
-      {:ok, bad} -> raise ArgumentError, "invalid value for :playback_mode: #{inspect(bad)}"
+  defp check_allowed_keys!(opts, allowed, context) do
+    invalid = opts |> Keyword.keys() |> Enum.uniq() |> Enum.reject(&(&1 in allowed))
+
+    if invalid != [] do
+      raise ArgumentError, "invalid option(s) for #{context}: #{inspect(invalid)}"
     end
+
+    :ok
   end
 
-  defp validate_timeout!(opts) do
-    case Keyword.fetch(opts, :timeout) do
-      :error -> :ok
-      {:ok, timeout} when is_integer(timeout) and timeout >= 0 -> :ok
-      {:ok, bad} -> raise ArgumentError, "invalid value for :timeout: #{inspect(bad)}"
-    end
+  defp validate_values!(opts) do
+    Enum.each(opts, fn
+      {key, value} when key in [:timbre, :rate, :gain] and is_number(value) -> :ok
+      {:pitch_shift, value} when is_integer(value) -> :ok
+      {key, value} when key in [:voice, :dictionary, :out] and is_binary(value) -> :ok
+      {:playback_mode, value} when value in @playback_modes -> :ok
+      {:timeout, value} when is_integer(value) and value > 0 -> :ok
+      {key, value} -> raise ArgumentError, "invalid value for #{inspect(key)}: #{inspect(value)}"
+    end)
   end
 end

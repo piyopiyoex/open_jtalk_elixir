@@ -23,8 +23,40 @@ defmodule OpenJTalk.OptionsTest do
   end
 
   test "validate!/1 rejects invalid timeout" do
-    assert_raise ArgumentError, "invalid value for :timeout: -1", fn ->
-      Options.validate!(timeout: -1)
+    for timeout <- [-1, 0] do
+      assert_raise ArgumentError, "invalid value for :timeout: #{timeout}", fn ->
+        Options.validate!(timeout: timeout)
+      end
+    end
+  end
+
+  test "validate!/1 rejects invalid option value types" do
+    for {key, value} <- [
+          timbre: :warm,
+          pitch_shift: 1.5,
+          rate: :fast,
+          gain: "loud",
+          voice: 123,
+          dictionary: 123,
+          out: 123
+        ] do
+      assert_raise ArgumentError, ~r/invalid value for #{inspect(key)}/, fn ->
+        Options.validate!([{key, value}])
+      end
+    end
+  end
+
+  test "validate_for!/2 rejects options outside the function context" do
+    assert_raise ArgumentError, "invalid option(s) for player: [:voice]", fn ->
+      Options.validate_for!([voice: "/tmp/voice.htsvoice"], :player)
+    end
+
+    assert_raise ArgumentError, "invalid option(s) for synth: [:out]", fn ->
+      Options.validate_for!([out: "/tmp/out.wav"], :synth)
+    end
+
+    assert_raise ArgumentError, "invalid option(s) for say: [:out]", fn ->
+      Options.validate_for!([out: "/tmp/out.wav"], :say)
     end
   end
 
@@ -42,7 +74,7 @@ defmodule OpenJTalk.OptionsTest do
   test "normalize_timeout/1 defaults absent or invalid values" do
     assert Options.normalize_timeout(nil) == 20_000
     assert Options.normalize_timeout(:bad) == 20_000
-    assert Options.normalize_timeout(0) == 0
+    assert Options.normalize_timeout(0) == 20_000
     assert Options.normalize_timeout(123) == 123
   end
 

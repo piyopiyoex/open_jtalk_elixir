@@ -2,7 +2,7 @@ defmodule OpenJTalk.Player do
   @moduledoc false
   # Audio playback helpers for WAV produced by OpenJTalk.
 
-  alias OpenJTalk.{Options, Tempfile}
+  alias OpenJTalk.{Command, Options, Tempfile}
 
   @type playback_mode :: OpenJTalk.playback_mode()
 
@@ -120,7 +120,7 @@ defmodule OpenJTalk.Player do
     timeout = Options.normalize_timeout(Keyword.get(opts, :timeout))
     base = [stderr_to_stdout: true, timeout: timeout]
     mu_opts = if is_binary(stdin_bin), do: Keyword.put(base, :stdin, stdin_bin), else: base
-    MuonTrap.cmd(cmd, args, mu_opts)
+    Command.run(cmd, args, mu_opts)
   end
 
   defp resolve_player() do

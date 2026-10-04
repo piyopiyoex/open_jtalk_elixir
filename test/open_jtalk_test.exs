@@ -21,4 +21,18 @@ defmodule OpenJTalkTest do
   test "to_wav_binary/2 returns RIFF WAV bytes" do
     assert {:ok, <<"RIFF", _::binary>>} = OpenJTalk.to_wav_binary("こんにちは")
   end
+
+  test "public functions reject options that do not apply" do
+    assert_raise ArgumentError, ~r/invalid option\(s\) for synth/, fn ->
+      OpenJTalk.to_wav_binary("こんにちは", out: "/tmp/ignored.wav")
+    end
+
+    assert_raise ArgumentError, ~r/invalid option\(s\) for player/, fn ->
+      OpenJTalk.play_wav_binary(<<>>, voice: "/tmp/ignored.htsvoice")
+    end
+
+    assert_raise ArgumentError, ~r/invalid option\(s\) for say/, fn ->
+      OpenJTalk.say("こんにちは", out: "/tmp/ignored.wav")
+    end
+  end
 end
