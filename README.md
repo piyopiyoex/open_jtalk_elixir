@@ -279,9 +279,6 @@ mix test
 Audio playback tests are excluded by default because they require a supported
 system player. Enable them explicitly with `OPENJTALK_AUDIO_TESTS=1 mix test`.
 
-Maintainers can follow [RELEASE.md](RELEASE.md) for the package verification
-and publishing sequence.
-
 ## Third-party components and licenses
 
 This package does not redistribute third-party assets by default.
