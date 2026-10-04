@@ -64,9 +64,9 @@ dictionary and voice by default, as on host builds, while allowing
 
 ## References
 
-- `Makefile`
-- `scripts/build_openjtalk.sh`
-- `lib/open_jtalk/assets.ex`
-- `README.md`
+- [Native build entry point](../../Makefile)
+- [Open JTalk build script](../../scripts/build_openjtalk.sh)
+- [Asset resolution](../../lib/open_jtalk/assets.ex)
+- [Project README](../../README.md)
 - [ADR 0002](0002-build-native-dependencies-during-package-compilation.md)
 - [ADR 0003](0003-resolve-runtime-assets-by-priority.md)

@@ -1,10 +1,11 @@
 # Architecture Decision Records
 
 This directory records architectural decisions that are expected to remain
-stable in `open_jtalk_elixir`.
+stable in `open_jtalk_elixir`. See the [documentation index](../README.md) for
+the role and precedence of each document type.
 
-For usage instructions and the current public API, prefer the repository's
-top-level `README.md` and module documentation.
+For usage instructions and the current public API, prefer the
+[project README](../../README.md) and module documentation.
 
 | ADR | Decision | Status |
 | --- | --- | --- |
@@ -17,8 +18,25 @@ top-level `README.md` and module documentation.
 
 - Record one long-lived decision per ADR.
 - State whether a decision is proposed, accepted, rejected, or superseded.
-- When implementation and an ADR diverge, update the ADR or add a superseding
-  ADR.
+- When a later ADR supersedes all or part of an earlier decision, link the two
+  records in both directions.
+- When implementation and an ADR diverge, update the record or add a
+  superseding ADR.
 - Keep operational procedures and temporary investigations out of ADRs.
 - Document detailed public API behavior in module documentation or the
   top-level `README.md`.
+
+## Format
+
+```text
+# ADR NNNN: Decision title
+
+## Status
+## Context
+## Decision
+## Consequences
+### Benefits
+### Costs
+## Constraints
+## References
+```

@@ -66,7 +66,7 @@ standard execution path.
 
 ## References
 
-- `lib/open_jtalk.ex`
-- `lib/open_jtalk/command.ex`
-- `lib/open_jtalk/synth.ex`
-- `README.md`
+- [Public API](../../lib/open_jtalk.ex)
+- [Command boundary](../../lib/open_jtalk/command.ex)
+- [Synthesis command construction](../../lib/open_jtalk/synth.ex)
+- [Project README](../../README.md)

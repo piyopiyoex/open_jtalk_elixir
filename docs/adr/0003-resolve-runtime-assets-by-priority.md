@@ -68,6 +68,6 @@ changes.
 
 ## References
 
-- `lib/open_jtalk/assets.ex`
-- `lib/open_jtalk/info.ex`
-- `README.md`
+- [Asset resolution](../../lib/open_jtalk/assets.ex)
+- [Runtime diagnostics](../../lib/open_jtalk/info.ex)
+- [Project README](../../README.md)

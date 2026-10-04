@@ -64,7 +64,7 @@ build outputs on subsequent builds.
 
 ## References
 
-- `mix.exs`
-- `Makefile`
-- `scripts/prepare_vendor.sh`
-- `scripts/build_openjtalk.sh`
+- [Mix project configuration](../../mix.exs)
+- [Native build entry point](../../Makefile)
+- [Vendor preparation](../../scripts/prepare_vendor.sh)
+- [Open JTalk build script](../../scripts/build_openjtalk.sh)
