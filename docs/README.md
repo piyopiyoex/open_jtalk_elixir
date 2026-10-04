@@ -8,11 +8,11 @@ the public API reference.
 
 - [Project README](../README.md): introduction, installation, quick start, and
   main API
+- [`OpenJTalk` module documentation](https://hexdocs.pm/open_jtalk_elixir/OpenJTalk.html):
+  options, asset resolution, errors, and diagnostics
 - [Building](building.md): native requirements, build flow, and development
   checks
-- [Configuration](configuration.md): API options and runtime asset resolution
 - [Using with Nerves](nerves.md): target builds, audio, and firmware size
-- [Troubleshooting](troubleshooting.md): runtime errors and diagnostic steps
 - [Architecture Decision Records](adr/README.md): durable design decisions and
   their tradeoffs
 - [Release checklist](../RELEASE.md): maintainer-only package verification and
@@ -36,9 +36,7 @@ behavior.
 docs/
 |-- README.md
 |-- building.md
-|-- configuration.md
 |-- nerves.md
-|-- troubleshooting.md
 `-- adr/
     |-- README.md
     `-- NNNN-decision-title.md

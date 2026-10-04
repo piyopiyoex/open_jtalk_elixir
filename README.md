@@ -5,8 +5,6 @@
 
 [![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https%3A%2F%2Fgithub.com%2Fpiyopiyoex%2Fopen_jtalk_elixir%2Fblob%2Fmain%2Fnotebooks%2Fgetting-started.md)
 
-<!-- MODULEDOC -->
-
 Japanese text-to-speech for Elixir, powered by [Open JTalk](http://open-jtalk.sourceforge.net/).
 
 ```elixir
@@ -98,10 +96,8 @@ OpenJTalk.say("こんにちは", rate: 1.1, pitch_shift: 2, gain: 1)
 | `:timbre` | Voice-color offset, clamped to `-0.8..0.8` | `0.0` |
 | `:gain` | Output gain in dB, clamped to `-20..20` | `0` |
 
-See [Configuration](docs/configuration.md) and the
-[HexDocs API reference](https://hexdocs.pm/open_jtalk_elixir) for all options.
-
-<!-- MODULEDOC -->
+See the [`OpenJTalk` module documentation](https://hexdocs.pm/open_jtalk_elixir/OpenJTalk.html)
+for all options, asset-resolution rules, and runtime errors.
 
 ## Nerves
 
@@ -129,10 +125,9 @@ needs outbound HTTPS access during its first build. See
 ## Documentation
 
 - [HexDocs API reference](https://hexdocs.pm/open_jtalk_elixir)
+- [`OpenJTalk` module documentation](https://hexdocs.pm/open_jtalk_elixir/OpenJTalk.html)
 - [Building and development](docs/building.md)
-- [Configuration and asset resolution](docs/configuration.md)
 - [Using with Nerves](docs/nerves.md)
-- [Troubleshooting](docs/troubleshooting.md)
 - [Architecture Decision Records](https://github.com/piyopiyoex/open_jtalk_elixir/tree/main/docs/adr)
 
 ## License

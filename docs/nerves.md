@@ -81,5 +81,6 @@ CI cross-compiles and inspects an aarch64 RPi 4 executable. New Nerves targets
 should also be tested on hardware through actual synthesis and playback; a
 successful cross-build alone does not validate the audio path.
 
-See [Building](building.md) for native build details and
-[Configuration](configuration.md) for the complete asset-resolution rules.
+See [Building](building.md) for native build details and the
+[`OpenJTalk` module documentation](https://hexdocs.pm/open_jtalk_elixir/OpenJTalk.html#module-runtime-assets)
+for the complete asset-resolution rules.

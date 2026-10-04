@@ -69,9 +69,7 @@ defmodule OpenJtalkElixir.MixProject do
       extras: [
         "README.md",
         "docs/building.md",
-        "docs/configuration.md",
-        "docs/nerves.md",
-        "docs/troubleshooting.md"
+        "docs/nerves.md"
       ],
       source_ref: "v#{@version}",
       source_url: @source_url
@@ -87,9 +85,7 @@ defmodule OpenJtalkElixir.MixProject do
         "mix.exs",
         "vendor/config",
         "docs/building.md",
-        "docs/configuration.md",
         "docs/nerves.md",
-        "docs/troubleshooting.md",
         "CHANGELOG*",
         "README*",
         "LICENSE*"
