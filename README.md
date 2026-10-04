@@ -28,7 +28,7 @@ Add `open_jtalk_elixir` to your dependencies:
 ```elixir
 def deps do
   [
-    {:open_jtalk_elixir, "~> 0.3"}
+    {:open_jtalk_elixir, "~> 0.4"}
   ]
 end
 ```

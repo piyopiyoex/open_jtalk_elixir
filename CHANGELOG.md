@@ -1,5 +1,42 @@
 # Changelog
 
+## v0.4.0
+
+This release tightens runtime contracts, hardens WAV handling and native
+builds, and reorganizes the documentation around a simpler newcomer path.
+
+### Runtime behavior
+
+- Validate options in the context of each public function. In particular,
+  `:out` is accepted only by `OpenJTalk.to_wav_file/2`.
+- Require positive timeouts and reject invalid option value types consistently.
+- Keep synthesis and playback options separated inside `OpenJTalk.say/2`.
+- Route audio-player commands through the shared command boundary for
+  consistent timeout and error handling.
+
+### WAV correctness
+
+- Reject mismatched RIFF sizes, truncated chunks, malformed format extensions,
+  and missing odd-byte chunk padding.
+
+### Native builds and packaging
+
+- Pin and SHA-256 verify every downloaded source and runtime asset before use.
+- Download vendor inputs atomically and reject invalid cached archives.
+- Rebuild native outputs when relevant scripts, archives, or configuration
+  inputs change.
+- Expand CI coverage for supported host platforms, Nerves cross-compilation,
+  and the unpacked Hex package.
+
+### Documentation
+
+- Add focused build and Nerves guides to HexDocs and the Hex package.
+- Document runtime errors, asset resolution, and function-specific options in
+  the `OpenJTalk` module documentation.
+- Record the implemented architecture in ADRs and add a maintainer release
+  checklist.
+- Restructure the top-level README around installation and first use.
+
 ## v0.3.1
 
 This patch release contains no public API changes and focuses on WAV

@@ -2,7 +2,7 @@
 
 ```elixir
 Mix.install([
-  {:open_jtalk_elixir, "~> 0.3.0"}
+  {:open_jtalk_elixir, "~> 0.4"}
 ])
 ```
 
