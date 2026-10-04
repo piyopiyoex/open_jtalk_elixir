@@ -39,7 +39,8 @@ mix compile
 On first compile the project may download and build MeCab, HTS Engine API,
 and Open JTalk. By default it also downloads and bundles a UTF-8 dictionary
 and a Mei voice into `priv/` (you can turn this off with
-`OPENJTALK_BUNDLE_ASSETS=0`).
+`OPENJTALK_BUNDLE_ASSETS=0`). Downloads are checked against pinned SHA-256
+digests before they are used.
 
 ### Build requirements
 
