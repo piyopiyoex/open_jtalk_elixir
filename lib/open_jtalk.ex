@@ -1,56 +1,57 @@
 defmodule OpenJTalk do
-  @moduledoc """
-  Japanese text-to-speech powered by Open JTalk.
+  @external_resource "README.md"
+  @moduledoc File.read!("README.md")
+             |> String.split("<!-- MODULEDOC -->")
+             |> Enum.fetch!(1)
+             |> Kernel.<>("""
+             Use `say/2` to synthesize and play speech, or `to_wav_binary/2` and
+             `to_wav_file/2` when the generated audio is needed directly.
 
-  Use `say/2` to synthesize and play speech, or `to_wav_binary/2` and
-  `to_wav_file/2` when the generated audio is needed directly.
+                 {:ok, wav} = OpenJTalk.to_wav_binary("こんにちは", rate: 1.1)
+                 {:ok, path} = OpenJTalk.to_wav_file("こんにちは", out: "/tmp/greeting.wav")
 
-      :ok = OpenJTalk.say("こんにちは")
-      {:ok, wav} = OpenJTalk.to_wav_binary("こんにちは", rate: 1.1)
-      {:ok, path} = OpenJTalk.to_wav_file("こんにちは", out: "/tmp/greeting.wav")
+             ## Options
 
-  ## Options
+             Synthesis functions accept `t:synth_option/0`. `say/2` also accepts
+             `t:player_option/0`, and `to_wav_file/2` additionally accepts `:out`.
 
-  Synthesis functions accept `t:synth_option/0`. `say/2` also accepts
-  `t:player_option/0`, and `to_wav_file/2` additionally accepts `:out`.
+             Options are validated before work begins. Unknown keys, invalid playback
+             modes, and non-positive timeouts raise `ArgumentError`; numeric synthesis
+             values outside their supported ranges are clamped.
 
-  Options are validated before work begins. Unknown keys, invalid playback
-  modes, and non-positive timeouts raise `ArgumentError`; numeric synthesis
-  values outside their supported ranges are clamped.
+             ## Runtime assets
 
-  ## Runtime assets
+             Synthesis requires the `open_jtalk` executable, a dictionary containing
+             `sys.dic`, and an HTS voice. Automatic lookup uses this order:
 
-  Synthesis requires the `open_jtalk` executable, a dictionary containing
-  `sys.dic`, and an HTS voice. Automatic lookup uses this order:
+             1. `OPENJTALK_CLI`, `OPENJTALK_DICTIONARY_DIR`, or `OPENJTALK_VOICE`;
+             2. the corresponding bundled asset under the application's `priv/` directory;
+             3. a supported system installation.
 
-  1. `OPENJTALK_CLI`, `OPENJTALK_DICTIONARY_DIR`, or `OPENJTALK_VOICE`;
-  2. the corresponding bundled asset under the application's `priv/` directory;
-  3. a supported system installation.
+             A per-call `:dictionary` or `:voice` option overrides automatic lookup for
+             that request. Successful automatic resolutions are cached. After changing
+             environment variables or moving assets at runtime, reset them before the
+             next synthesis:
 
-  A per-call `:dictionary` or `:voice` option overrides automatic lookup for
-  that request. Successful automatic resolutions are cached. After changing
-  environment variables or moving assets at runtime, reset them before the
-  next synthesis:
+                 OpenJTalk.Assets.reset_cache()
 
-      OpenJTalk.Assets.reset_cache()
+             Use `info/0` to inspect each resolved path and whether it came from the
+             environment, bundled assets, or the system.
 
-  Use `info/0` to inspect each resolved path and whether it came from the
-  environment, bundled assets, or the system.
+             ## Errors and diagnostics
 
-  ## Errors and diagnostics
+             Runtime failures return `{:error, reason}`. Common reasons include:
 
-  Runtime failures return `{:error, reason}`. Common reasons include:
+               * `{:binary_missing, paths}`, `{:dictionary_missing, path}`, or
+                 `{:voice_missing, path}` when a required component cannot be resolved;
+               * `{:open_jtalk_exit, status, output}` when synthesis fails;
+               * `:no_player_found` or `{:player_failed, status, output}` when playback
+                 fails.
 
-    * `{:binary_missing, paths}`, `{:dictionary_missing, path}`, or
-      `{:voice_missing, path}` when a required component cannot be resolved;
-    * `{:open_jtalk_exit, status, output}` when synthesis fails;
-    * `:no_player_found` or `{:player_failed, status, output}` when playback
-      fails.
-
-  A command status may be `:timeout`. If synthesis succeeds but playback does
-  not, use `to_wav_binary/2` to isolate the audio-player path and call `info/0`
-  to see which player was selected.
-  """
+             A command status may be `:timeout`. If synthesis succeeds but playback does
+             not, use `to_wav_binary/2` to isolate the audio-player path and call `info/0`
+             to see which player was selected.
+             """)
 
   @typedoc "Voice color adjustment. Range: -0.8..0.8 (values are clamped)."
   @type timbre :: float()

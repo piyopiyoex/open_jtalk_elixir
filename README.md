@@ -5,11 +5,15 @@
 
 [![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https%3A%2F%2Fgithub.com%2Fpiyopiyoex%2Fopen_jtalk_elixir%2Fblob%2Fmain%2Fnotebooks%2Fgetting-started.md)
 
+<!-- MODULEDOC -->
+
 Japanese text-to-speech for Elixir, powered by [Open JTalk](http://open-jtalk.sourceforge.net/).
 
 ```elixir
 OpenJTalk.say("こんにちは")
 ```
+
+<!-- MODULEDOC -->
 
 ## Why this package?
 
