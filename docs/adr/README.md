@@ -17,6 +17,7 @@ For usage instructions and the current public API, prefer the
 ## Maintenance rules
 
 - Record one long-lived decision per ADR.
+- Name ADR files `NNNN-kebab-case-decision-title.md`.
 - State whether a decision is proposed, accepted, rejected, or superseded.
 - When a later ADR supersedes all or part of an earlier decision, link the two
   records in both directions.

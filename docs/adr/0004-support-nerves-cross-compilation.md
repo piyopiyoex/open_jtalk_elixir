@@ -6,7 +6,7 @@ Accepted and implemented. Retrospectively recorded on 2026-10-04.
 
 ## Context
 
-Using Japanese speech synthesis on Nerves devices is a primary use case for
+Using Japanese speech synthesis on Nerves devices is an important use case for
 `open_jtalk_elixir`. In a Nerves build, Mix runs on the host while Open JTalk
 must be compiled for the target CPU.
 

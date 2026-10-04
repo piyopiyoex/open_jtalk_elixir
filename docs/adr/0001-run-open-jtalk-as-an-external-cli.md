@@ -51,8 +51,8 @@ standard execution path.
 ### Costs
 
 - Each synthesis starts an external process.
-- Open JTalk's file-oriented CLI requires temporary files for text input and
-  WAV output.
+- Open JTalk's file-oriented CLI requires a temporary text input and, for
+  in-memory or immediate playback APIs, a temporary WAV output.
 - Internal Open JTalk APIs are unavailable through this interface.
 - The CLI argument contract becomes a compatibility boundary.
 

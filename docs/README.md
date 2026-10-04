@@ -17,8 +17,8 @@ top-level README and module documentation.
 
 When documents disagree, use this order:
 
-1. current code and module documentation;
-2. the top-level `README.md`;
+1. current implementation;
+2. module documentation and the top-level `README.md`;
 3. accepted ADRs; and
 4. historical discussion in issues and pull requests.
 
