@@ -42,8 +42,14 @@ the native build, and asset installation.
 
 1. Commit the version and changelog changes using the existing release commit
    style, for example `v0.4.0 release`.
-2. Create the matching annotated Git tag.
-3. Run `MIX_ENV=docs mix hex.publish` and review the package contents before
-   confirming.
-4. Push the release commit and tag.
-5. Verify the HexDocs page and the CI run for the tag/commit.
+2. Merge the release commit into `main` and update the local `main` branch.
+3. Run `mix hex.user whoami` to confirm Hex authentication. Publishing prompts
+   for a two-factor authentication code, so run it from an interactive shell.
+4. Create the matching annotated Git tag on the merged release commit.
+5. Run `MIX_ENV=docs mix hex.publish` and review the package contents before
+   confirming. Keep the explicit environment so ExDoc is available.
+6. Verify the package and versioned HexDocs page, then push the tag.
+7. Create a GitHub Release from the tag, use the matching `CHANGELOG.md` entry
+   as its notes, and mark it as the latest release.
+8. Verify that Hex lists the new version as latest, the versioned HexDocs page
+   loads, the GitHub Release is published, and CI passes for the release commit.
