@@ -2,7 +2,7 @@ defmodule OpenJtalkElixir.MixProject do
   use Mix.Project
 
   @version "0.3.1"
-  @source_url "https://github.com/mnishiguchi/open_jtalk_elixir"
+  @source_url "https://github.com/piyopiyoex/open_jtalk_elixir"
 
   def project do
     [
@@ -66,7 +66,11 @@ defmodule OpenJtalkElixir.MixProject do
   defp docs do
     [
       main: "readme",
-      extras: ["README.md"],
+      extras: [
+        "README.md",
+        "docs/building.md",
+        "docs/nerves.md"
+      ],
       source_ref: "v#{@version}",
       source_url: @source_url
     ]
@@ -80,6 +84,8 @@ defmodule OpenJtalkElixir.MixProject do
         "Makefile",
         "mix.exs",
         "vendor/config",
+        "docs/building.md",
+        "docs/nerves.md",
         "CHANGELOG*",
         "README*",
         "LICENSE*"

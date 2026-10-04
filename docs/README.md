@@ -1,13 +1,18 @@
 # Documentation
 
-This directory contains project documentation that explains long-lived design
-decisions. Usage instructions and the current public API remain in the
-top-level README and module documentation.
+This directory contains focused user guides and long-lived design decisions.
+The top-level README remains the front door, and module documentation remains
+the public API reference.
 
 ## Where to start
 
-- [Project README](../README.md): installation, public API, configuration, and
-  troubleshooting
+- [Project README](../README.md): introduction, installation, quick start, and
+  main API
+- [`OpenJTalk` module documentation](https://hexdocs.pm/open_jtalk_elixir/OpenJTalk.html):
+  options, asset resolution, errors, and diagnostics
+- [Building](building.md): native requirements, build flow, and development
+  checks
+- [Using with Nerves](nerves.md): target builds, audio, and firmware size
 - [Architecture Decision Records](adr/README.md): durable design decisions and
   their tradeoffs
 - [Release checklist](../RELEASE.md): maintainer-only package verification and
@@ -30,6 +35,8 @@ behavior.
 ```text
 docs/
 |-- README.md
+|-- building.md
+|-- nerves.md
 `-- adr/
     |-- README.md
     `-- NNNN-decision-title.md

@@ -1,7 +1,57 @@
 defmodule OpenJTalk do
+  @external_resource "README.md"
   @moduledoc File.read!("README.md")
              |> String.split("<!-- MODULEDOC -->")
              |> Enum.fetch!(1)
+             |> Kernel.<>("""
+             Use `say/2` to synthesize and play speech, or `to_wav_binary/2` and
+             `to_wav_file/2` when the generated audio is needed directly.
+
+                 {:ok, wav} = OpenJTalk.to_wav_binary("こんにちは", rate: 1.1)
+                 {:ok, path} = OpenJTalk.to_wav_file("こんにちは", out: "/tmp/greeting.wav")
+
+             ## Options
+
+             Synthesis functions accept `t:synth_option/0`. `say/2` also accepts
+             `t:player_option/0`, and `to_wav_file/2` additionally accepts `:out`.
+
+             Options are validated before work begins. Unknown keys, invalid playback
+             modes, and non-positive timeouts raise `ArgumentError`; numeric synthesis
+             values outside their supported ranges are clamped.
+
+             ## Runtime assets
+
+             Synthesis requires the `open_jtalk` executable, a dictionary containing
+             `sys.dic`, and an HTS voice. Automatic lookup uses this order:
+
+             1. `OPENJTALK_CLI`, `OPENJTALK_DICTIONARY_DIR`, or `OPENJTALK_VOICE`;
+             2. the corresponding bundled asset under the application's `priv/` directory;
+             3. a supported system installation.
+
+             A per-call `:dictionary` or `:voice` option overrides automatic lookup for
+             that request. Successful automatic resolutions are cached. After changing
+             environment variables or moving assets at runtime, reset them before the
+             next synthesis:
+
+                 OpenJTalk.Assets.reset_cache()
+
+             Use `info/0` to inspect each resolved path and whether it came from the
+             environment, bundled assets, or the system.
+
+             ## Errors and diagnostics
+
+             Runtime failures return `{:error, reason}`. Common reasons include:
+
+               * `{:binary_missing, paths}`, `{:dictionary_missing, path}`, or
+                 `{:voice_missing, path}` when a required component cannot be resolved;
+               * `{:open_jtalk_exit, status, output}` when synthesis fails;
+               * `:no_player_found` or `{:player_failed, status, output}` when playback
+                 fails.
+
+             A command status may be `:timeout`. If synthesis succeeds but playback does
+             not, use `to_wav_binary/2` to isolate the audio-player path and call `info/0`
+             to see which player was selected.
+             """)
 
   @typedoc "Voice color adjustment. Range: -0.8..0.8 (values are clamped)."
   @type timbre :: float()
@@ -24,12 +74,27 @@ defmodule OpenJTalk do
   """
   @type playback_mode :: :auto | :file | :stdin
 
-  @typedoc "Options accepted by playback functions."
+  @typedoc """
+  Option accepted by playback functions.
+
+    * `:playback_mode` - `:auto` (default), `:stdin`, or `:file`
+    * `:timeout` - positive timeout in milliseconds; defaults to `20_000`
+  """
   @type player_option ::
           {:timeout, pos_integer()}
           | {:playback_mode, playback_mode()}
 
-  @typedoc "Options accepted by synthesis functions."
+  @typedoc """
+  Option accepted by synthesis functions.
+
+    * `:timbre` - voice-color offset, clamped to `-0.8..0.8`; defaults to `0.0`
+    * `:pitch_shift` - semitone shift, clamped to `-24..24`; defaults to `0`
+    * `:rate` - speaking speed, clamped to `0.5..2.0`; defaults to `1.0`
+    * `:gain` - output gain in dB, clamped to `-20..20`; defaults to `0`
+    * `:voice` - path to a `.htsvoice` file for this request
+    * `:dictionary` - path to a directory containing `sys.dic` for this request
+    * `:timeout` - positive timeout in milliseconds; defaults to `20_000`
+  """
   @type synth_option ::
           {:timbre, timbre()}
           | {:pitch_shift, pitch_shift()}
@@ -39,7 +104,7 @@ defmodule OpenJTalk do
           | {:dictionary, Path.t()}
           | {:timeout, pos_integer()}
 
-  @typedoc "Options accepted by `to_wav_file/2`."
+  @typedoc "A synthesis option, or `:out` with the destination WAV path."
   @type wav_file_option :: synth_option() | {:out, Path.t()}
 
   @typedoc "Options accepted by `say/2` (synthesis + playback)."
@@ -79,7 +144,13 @@ defmodule OpenJTalk do
 
   @doc """
   Synthesize `text` to a WAV file.
-  Respects `:out` when provided; otherwise creates a unique path in the system temp dir.
+
+  `:out` sets the destination path. Without it, a unique path is created in
+  the system temporary directory.
+
+  ## Example
+
+      {:ok, path} = OpenJTalk.to_wav_file("こんにちは", out: "/tmp/greeting.wav")
   """
   @spec to_wav_file(binary, [wav_file_option()]) :: {:ok, Path.t()} | {:error, term()}
   def to_wav_file(text, opts \\ []) when is_binary(text) do
@@ -99,7 +170,13 @@ defmodule OpenJTalk do
     end
   end
 
-  @doc "Synthesize `text` and return RIFF/WAV bytes."
+  @doc """
+  Synthesize `text` and return RIFF/WAV bytes.
+
+  ## Example
+
+      {:ok, wav} = OpenJTalk.to_wav_binary("こんにちは", rate: 1.1)
+  """
   @spec to_wav_binary(binary, [synth_option()]) :: {:ok, binary} | {:error, term()}
   def to_wav_binary(text, opts \\ []) when is_binary(text) do
     opts = OpenJTalk.Options.validate_for!(opts, :synth)
@@ -117,9 +194,9 @@ defmodule OpenJTalk do
   @doc """
   Play RIFF/WAV bytes already in memory.
 
-  Accepts the same `:playback_mode` and `:timeout` options as `say/2`.
-  Use `playback_mode: :stdin` for diskless playback when a stdin-capable player is
-  available. Playback falls back to a temporary file when stdin playback is unavailable.
+  `:auto` and `:stdin` stream to a stdin-capable player when possible and fall
+  back to a temporary file when stdin playback is unavailable. `:file` always
+  uses a temporary file.
   """
   @spec play_wav_binary(iodata(), [player_option()]) :: :ok | {:error, term()}
   def play_wav_binary(wav_bytes, opts \\ []) do
@@ -137,8 +214,13 @@ defmodule OpenJTalk do
   @doc """
   Synthesize `text` with Open JTalk and play it.
 
-  `:playback_mode` controls how playback occurs:
-  - `:auto` (default) tries stdin first, then falls back to file playback.
+  The default `:auto` playback mode tries stdin first, then falls back to file
+  playback. The generated WAV is not retained; use `to_wav_file/2` followed by
+  `play_wav_file/2` when a persistent output file is required.
+
+  ## Example
+
+      :ok = OpenJTalk.say("こんにちは", pitch_shift: 2)
   """
   @spec say(binary, [say_option()]) :: :ok | {:error, term()}
   def say(text, opts \\ []) do
@@ -168,7 +250,12 @@ defmodule OpenJTalk do
   defp synth_options(opts), do: Keyword.take(opts, @synth_option_keys)
   defp player_options(opts), do: Keyword.take(opts, @player_option_keys)
 
-  @doc "Return useful information about the local Open JTalk setup."
+  @doc """
+  Return the resolved executable, dictionary, voice, and audio player.
+
+  Each entry includes its path and whether it came from an environment
+  variable, bundled assets, the system, or no available source.
+  """
   @spec info() :: {:ok, info_map()}
   def info() do
     OpenJTalk.Info.info()

@@ -1,25 +1,29 @@
 # open_jtalk_elixir
 
 [![Hex version](https://img.shields.io/hexpm/v/open_jtalk_elixir.svg "Hex version")](https://hex.pm/packages/open_jtalk_elixir)
-[![CI](https://github.com/mnishiguchi/open_jtalk_elixir/actions/workflows/ci.yml/badge.svg)](https://github.com/mnishiguchi/open_jtalk_elixir/actions/workflows/ci.yml)
-
-<!-- MODULEDOC -->
-
-Use Open JTalk from Elixir. This package builds a local `open_jtalk` CLI and,
-by default, bundles a UTF-8 dictionary and an HTS voice (you can disable this),
-exposing convenient functions:
-
-- `OpenJTalk.say/2` — synthesize and play via a system audio player
-- `OpenJTalk.to_wav_file/2` — synthesize text to a WAV file
-- `OpenJTalk.to_wav_binary/2` — synthesize and return WAV bytes
-- `OpenJTalk.Wav.concat_binaries/1` — merge multiple WAV binaries (same format)
-- `OpenJTalk.Wav.concat_files/1` — merge multiple WAV files from paths (same format)
+[![CI](https://github.com/piyopiyoex/open_jtalk_elixir/actions/workflows/ci.yml/badge.svg)](https://github.com/piyopiyoex/open_jtalk_elixir/actions/workflows/ci.yml)
 
 [![Run in Livebook](https://livebook.dev/badge/v1/blue.svg)](https://livebook.dev/run?url=https%3A%2F%2Fgithub.com%2Fpiyopiyoex%2Fopen_jtalk_elixir%2Fblob%2Fmain%2Fnotebooks%2Fgetting-started.md)
 
-## Install
+<!-- MODULEDOC -->
 
-Add the dependency to your `mix.exs`:
+Japanese text-to-speech for Elixir, powered by [Open JTalk](http://open-jtalk.sourceforge.net/).
+
+```elixir
+OpenJTalk.say("こんにちは")
+```
+
+<!-- MODULEDOC -->
+
+## Why this package?
+
+- A small Elixir API for speech playback and WAV generation
+- Automatic native builds with pinned, verified Open JTalk dependencies
+- Support for Linux, macOS, and Nerves
+
+## Installation
+
+Add `open_jtalk_elixir` to your dependencies:
 
 ```elixir
 def deps do
@@ -29,275 +33,121 @@ def deps do
 end
 ```
 
-Then:
+Then fetch dependencies and compile:
 
 ```bash
 mix deps.get
 mix compile
 ```
 
-On first compile the project may download and build MeCab, HTS Engine API,
-and Open JTalk. By default it also downloads and bundles a UTF-8 dictionary
-and a Mei voice into `priv/` (you can turn this off with
-`OPENJTALK_BUNDLE_ASSETS=0`). Downloads are checked against pinned SHA-256
-digests before they are used.
-
-Hex releases do not contain the upstream source and asset archives, so the
-first compile normally requires outbound HTTPS access to SourceForge and
-Debian mirrors. Subsequent builds reuse the downloaded archives and native
-outputs.
-
-### Build requirements
-
-You’ll need common build tools: `gcc`/`g++`, `make`, `curl`, `tar`, `unzip`.
-On macOS Xcode Command Line Tools are sufficient.
-
-Optional environment flags (honored by the Makefile):
-
-- `OPENJTALK_FULL_STATIC=1` — attempt a fully static `open_jtalk` (Linux only; requires static libstdc++)
-- `OPENJTALK_BUNDLE_ASSETS=0|1` — whether to bundle dictionary/voice into `priv/`
-
-### Maintainer build notes
-
-At compile time, `elixir_make` runs the Makefile to build the local
-`open_jtalk` command. If vendor payloads are missing, the Makefile runs
-`scripts/prepare_vendor.sh`; then `scripts/build_openjtalk.sh` builds MeCab,
-HTS Engine, and Open JTalk.
-
-Runtime files are installed under `priv/`:
-
-- `priv/bin/open_jtalk`
-- `priv/lib/`
-- `priv/dictionary/sys.dic` when `OPENJTALK_BUNDLE_ASSETS=1`
-- `priv/voices/mei_normal.htsvoice` when `OPENJTALK_BUNDLE_ASSETS=1`
-
-Native source trees are extracted under `_build/.../obj/vendor/`, not directly
-under `vendor/`, so checked-in/downloaded payloads stay separate from generated
-Autotools files.
-
-The package intentionally shells out to the `open_jtalk` command instead of
-calling C directly from the BEAM.
-
-### Tested platforms
-
-Host builds (compile and run on the same machine):
-
-- Linux x86_64
-- Linux aarch64
-- macOS 14 (arm64, Apple Silicon)
-
-Cross-compile (host → target):
-
-- Linux x86_64 → Nerves rpi4 (aarch64)
-
-The Mix project supports Elixir 1.15 and later. CI exercises the lower bound
-with Elixir 1.15/OTP 26 and the current project baseline with Elixir 1.19/OTP
-28. Other compatible Elixir/OTP combinations may work but are not part of the
-CI matrix.
+The first compile builds the required native components and may download
+verified source and runtime assets. See [Building](docs/building.md) for system
+requirements and the complete build flow.
 
 ## Quick start
 
-```elixir
-# play via system audio player (aplay/paplay/afplay/play)
-OpenJTalk.say("元氣ですかあ 、元氣が有れば、なんでもできる")
-```
-
-### Options
-
-All synthesis calls accept the same options (values are clamped):
-
-- `:timbre` — voice color offset `-0.8..0.8` (default `0.0`)
-- `:pitch_shift` — semitones `-24..24` (default `0`)
-- `:rate` — speaking speed `0.5..2.0` (default `1.0`)
-- `:gain` — output gain in dB (default `0`)
-- `:voice` — path to a `.htsvoice` file (optional)
-- `:dictionary` — path to a directory containing `sys.dic` (optional)
-- `:timeout` — max runtime in ms (default `20_000`)
-- `:out` — output WAV path (only for `to_wav_file/2`)
-
-### Concatenate WAVs
-
-You can combine multiple WAVs (same format: channels/rate/bit depth/etc.) into one:
+Speak text through an available system audio player:
 
 ```elixir
-{:ok, a} = OpenJTalk.to_wav_binary("これは一つ目。")
-{:ok, b} = OpenJTalk.to_wav_binary("これは二つ目。")
-{:ok, c} = OpenJTalk.to_wav_binary("これは三つ目。")
-
-{:ok, merged} = OpenJTalk.Wav.concat_binaries([a, b, c])
-# or from files:
-# {:ok, merged} = OpenJTalk.Wav.concat_files(["a.wav", "b.wav", "c.wav"])
+:ok = OpenJTalk.say("こんにちは")
 ```
 
-<!-- MODULEDOC -->
-
-## How asset resolution works
-
-The package resolves required assets in this order:
-
-1. Environment variable override
-2. Bundled asset in `priv/`
-3. System-installed location
-
-### CLI binary (`open_jtalk`)
-
-- **Env:** `OPENJTALK_CLI` — full path to `open_jtalk`.
-- **Bundled:** `priv/bin/open_jtalk` (built during compile).
-- **System:** `open_jtalk` found on `$PATH`.
-
-### Dictionary (`sys.dic`)
-
-- **Env:** `OPENJTALK_DICTIONARY_DIR` — directory containing `sys.dic`.
-- **Bundled:** `priv/dictionary/sys.dic` or any `priv/dictionary/**/sys.dic` (e.g. `naist-jdic`).
-- **System:** common locations such as `/var/lib/mecab/dic/open-jtalk/naist-jdic`,
-  `/usr/lib/*/mecab/dic/open-jtalk/naist-jdic`, etc.
-
-### Voice (`.htsvoice`)
-
-- **Env:** `OPENJTALK_VOICE` — path to a `.htsvoice` file.
-- **Bundled:** first file matching `priv/voices/**/*.htsvoice`.
-- **System:** standard locations like `/usr/share/hts-voice/**` or `/usr/local/share/hts-voice/**`.
-
-If you change environment variables at runtime (or move files), refresh the
-cached paths:
+Generate WAV data in memory:
 
 ```elixir
-OpenJTalk.Assets.reset_cache()
+{:ok, wav} = OpenJTalk.to_wav_binary("こんにちは")
 ```
 
-## Errors and troubleshooting
-
-Invalid options raise `ArgumentError`; failures involving the filesystem,
-native command, WAV input, or audio player return `{:error, reason}`. This
-keeps programmer mistakes distinct from runtime failures:
+Write a WAV file:
 
 ```elixir
-OpenJTalk.play_wav_binary(wav, playback_mode: :stream)
-# ** (ArgumentError) ...
-
-{:error, {:dictionary_missing, searched_path}} =
-  OpenJTalk.to_wav_binary("こんにちは", dictionary: "/missing/dictionary")
+{:ok, path} = OpenJTalk.to_wav_file("こんにちは", out: "/tmp/greeting.wav")
 ```
 
-Common runtime reasons include:
+`say/2` uses `aplay`, `paplay`, `afplay`, or SoX `play`, depending on what is
+available on the system.
 
-- `{:binary_missing, searched_paths}`, `{:dictionary_missing, path}`, or
-  `{:voice_missing, path}` when an Open JTalk component cannot be resolved
-- `{:open_jtalk_exit, status, output}` when synthesis exits unsuccessfully;
-  `status` can be `:timeout`
-- `:no_player_found` or `{:player_failed, status, output}` for playback
-- `{:parse_failed, index, reason}` for invalid WAV input during concatenation
+## Main API
 
-Useful diagnostic steps:
+| Function | Purpose |
+| --- | --- |
+| `OpenJTalk.say/2` | Synthesize and play speech |
+| `OpenJTalk.to_wav_binary/2` | Return synthesized RIFF/WAV bytes |
+| `OpenJTalk.to_wav_file/2` | Write synthesized speech to a WAV file |
+| `OpenJTalk.play_wav_binary/2` | Play existing WAV data |
+| `OpenJTalk.play_wav_file/2` | Play an existing WAV file |
+| `OpenJTalk.Wav.concat_binaries/1` | Concatenate compatible WAV binaries |
+| `OpenJTalk.Wav.concat_files/1` | Concatenate compatible WAV files |
 
-1. Run `OpenJTalk.info/0` to see the resolved CLI, dictionary, voice, and audio
-   player paths.
-2. Check the `OPENJTALK_CLI`, `OPENJTALK_DICTIONARY_DIR`, and
-   `OPENJTALK_VOICE` overrides, then reset the asset cache as shown above.
-3. If an initial download or extraction was interrupted, run
-   `scripts/prepare_vendor.sh --force` and compile again.
-4. If synthesis works but `say/2` does not, verify that `aplay`, `paplay`,
-   `afplay`, or SoX `play` is installed and usable by the application user.
-
-## Using with Nerves
-
-This library is Nerves-aware. When `MIX_TARGET` is set the build defaults to:
-
-- `OPENJTALK_FULL_STATIC=1` — try to statically link the CLI on Linux targets when possible
-- `OPENJTALK_BUNDLE_ASSETS=1` — bundle CLI, dictionary, and voice into `priv/`
-
-So for many projects no extra configuration is needed.
-
-### Quick Nerves flow
-
-```bash
-export MIX_TARGET=rpi4
-mix deps.get
-mix compile
-mix firmware
-```
-
-On the device:
+Compatible WAV data can be joined without re-encoding:
 
 ```elixir
-{:ok, info} = OpenJTalk.info()
-# bundled assets should show up as :bundled
-
-OpenJTalk.say("こんにちは")
+{:ok, a} = OpenJTalk.to_wav_binary("一つ目")
+{:ok, b} = OpenJTalk.to_wav_binary("二つ目")
+{:ok, merged} = OpenJTalk.Wav.concat_binaries([a, b])
 ```
 
-### Audio on Nerves
-
-`OpenJTalk.say/2` requires a system audio player. Most Nerves images use ALSA
-`aplay`. If your image does not include a player:
-
-- add one to the system image, or
-- use `OpenJTalk.to_wav_file/2` and play the WAV with your chosen mechanism.
-
-### Firmware size notes
-
-Bundling the full dictionary + voice + binary increases firmware size. Approximate
-(uncompressed) sizes:
-
-- Dictionary: ~103 MB
-- Mei voice: ~2.2 MB
-- CLI binary: ~2.4 MB
-
-If that’s too large you can avoid bundling at compile time and provision assets
-separately (rootfs overlay, `/data`, OTA, etc.):
-
-```bash
-MIX_TARGET=rpi4 OPENJTALK_BUNDLE_ASSETS=0 mix deps.compile open_jtalk_elixir
-```
-
-Then point the library to the provisioned assets (for example in
-`config/runtime.exs`):
+## Common options
 
 ```elixir
-System.put_env("OPENJTALK_CLI", "/data/open_jtalk/bin/open_jtalk")
-System.put_env("OPENJTALK_DICTIONARY_DIR", "/data/open_jtalk/dic")
-System.put_env("OPENJTALK_VOICE", "/data/open_jtalk/voices/mei_normal.htsvoice")
-
-OpenJTalk.Assets.reset_cache()
+OpenJTalk.say("こんにちは", rate: 1.1, pitch_shift: 2, gain: 1)
 ```
 
-How you provision those files into your image is outside the scope of this
-library.
+| Option | Meaning | Default |
+| --- | --- | --- |
+| `:rate` | Speaking speed, clamped to `0.5..2.0` | `1.0` |
+| `:pitch_shift` | Semitone shift, clamped to `-24..24` | `0` |
+| `:timbre` | Voice-color offset, clamped to `-0.8..0.8` | `0.0` |
+| `:gain` | Output gain in dB, clamped to `-20..20` | `0` |
 
-## Development
+See the [`OpenJTalk` module documentation](https://hexdocs.pm/open_jtalk_elixir/OpenJTalk.html)
+for all options, asset-resolution rules, and runtime errors.
 
-Run the same checks used by CI before submitting changes:
+## Nerves
 
-```bash
-mix format --check-formatted
-shellcheck -x scripts/*.sh
-MIX_ENV=lint mix compile --warnings-as-errors
-MIX_ENV=lint mix dialyzer --format short
-MIX_ENV=lint mix credo --all --strict --format=oneline
-mix test
-```
+Nerves is a supported build path. In common cases, add the dependency and
+compile normally for the selected `MIX_TARGET`.
 
-Audio playback tests are excluded by default because they require a supported
-system player. Enable them explicitly with `OPENJTALK_AUDIO_TESTS=1 mix test`.
+The bundled dictionary is about 103 MB uncompressed, so firmware size deserves
+an explicit decision. See [Using with Nerves](docs/nerves.md) for build behavior,
+audio requirements, and external asset configuration.
 
-## Third-party components and licenses
+## Supported platforms and requirements
 
-This package does not redistribute third-party assets by default.
-At compile time it may download and build the following components:
+| Build | CI coverage |
+| --- | --- |
+| Linux x86_64 | Host build and tests |
+| Linux aarch64 | Host build and tests |
+| macOS 14 arm64 | Host build and tests |
+| Nerves RPi 4 aarch64 | Cross-compilation |
 
-- **Open JTalk 1.11**
-  - License: Modified BSD (3-Clause)
-  - Source: http://open-jtalk.sourceforge.net/
-- **HTS Engine API 1.10**
-  - License: Modified BSD (3-Clause)
-  - Source: http://hts-engine.sourceforge.net/
-- **MeCab 0.996**
-  - License: Tri-licensed (GPL / LGPL / BSD); used under BSD terms
-  - Source: https://taku910.github.io/mecab/
-- **Open JTalk Dictionary (NAIST-JDIC UTF-8) 1.11**
-  - License: BSD-style by NAIST
-  - Source: https://sourceforge.net/projects/open-jtalk/files/Dictionary/
-- **HTS Voice “Mei” (MMDAgent_Example 1.8)**
-  - License: CC BY 3.0
-  - Source: https://sourceforge.net/projects/mmdagent/files/MMDAgent_Example/
-  - Attribution: “HTS Voice ‘Mei’ © Nagoya Institute of Technology, licensed CC BY 3.0.”
+The project supports Elixir 1.15 and later. Native compilation requires a C/C++
+toolchain, `make`, `curl`, `tar`, and `unzip`. A Hex installation normally
+needs outbound HTTPS access during its first build. See
+[Building](docs/building.md) for details.
+
+## Documentation
+
+- [HexDocs API reference](https://hexdocs.pm/open_jtalk_elixir)
+- [`OpenJTalk` module documentation](https://hexdocs.pm/open_jtalk_elixir/OpenJTalk.html)
+- [Building and development](docs/building.md)
+- [Using with Nerves](docs/nerves.md)
+- [Architecture Decision Records](https://github.com/piyopiyoex/open_jtalk_elixir/tree/main/docs/adr)
+
+## License
+
+`open_jtalk_elixir` is released under the
+[Apache License 2.0](https://github.com/piyopiyoex/open_jtalk_elixir/blob/main/LICENSE).
+
+The Hex package does not contain the upstream source or asset archives, but a
+build may download these pinned third-party components:
+
+- [Open JTalk 1.11](http://open-jtalk.sourceforge.net/) - Modified BSD
+- [HTS Engine API 1.10](http://hts-engine.sourceforge.net/) - Modified BSD
+- [MeCab 0.996](https://taku910.github.io/mecab/) - GPL, LGPL, or BSD; used
+  under the BSD terms
+- [Open JTalk Dictionary 1.11](https://sourceforge.net/projects/open-jtalk/files/Dictionary/)
+  - BSD-style license by NAIST
+- [HTS Voice "Mei"](https://sourceforge.net/projects/mmdagent/files/MMDAgent_Example/)
+  - CC BY 3.0; "HTS Voice 'Mei' © Nagoya Institute of Technology, licensed
+    CC BY 3.0."
