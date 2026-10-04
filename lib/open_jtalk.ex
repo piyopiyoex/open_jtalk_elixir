@@ -42,8 +42,8 @@ defmodule OpenJTalk do
   @typedoc "Options accepted by `to_wav_file/2`."
   @type wav_file_option :: synth_option() | {:out, Path.t()}
 
-  @typedoc "Options accepted by `say/2` (synth + playback + optional `:out`)."
-  @type say_option :: player_option() | synth_option() | {:out, Path.t()}
+  @typedoc "Options accepted by `say/2` (synthesis + playback)."
+  @type say_option :: player_option() | synth_option()
 
   @synth_option_keys [:timbre, :pitch_shift, :rate, :gain, :voice, :dictionary, :timeout]
   @player_option_keys [:timeout, :playback_mode]
@@ -148,7 +148,7 @@ defmodule OpenJTalk do
   end
 
   defp do_say(text, :stdin, opts) do
-    with {:ok, wav} <- synthesize_for_stdin(text, opts) do
+    with {:ok, wav} <- to_wav_binary(text, synth_options(opts)) do
       OpenJTalk.Player.play_wav_binary(wav, player_options(opts))
     end
   end
@@ -164,18 +164,6 @@ defmodule OpenJTalk do
 
   # :auto prefers stdin path (Player will fall back to file internally as needed)
   defp do_say(text, :auto, opts), do: do_say(text, :stdin, opts)
-
-  defp synthesize_for_stdin(text, opts) do
-    case Keyword.fetch(opts, :out) do
-      {:ok, out} ->
-        with {:ok, ^out} <- to_wav_file(text, Keyword.put(synth_options(opts), :out, out)) do
-          File.read(out)
-        end
-
-      :error ->
-        to_wav_binary(text, synth_options(opts))
-    end
-  end
 
   defp synth_options(opts), do: Keyword.take(opts, @synth_option_keys)
   defp player_options(opts), do: Keyword.take(opts, @player_option_keys)

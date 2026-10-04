@@ -23,7 +23,7 @@ defmodule OpenJTalk.Options do
     synth: @synth_keys,
     wav_file: [:out | @synth_keys],
     player: @player_keys,
-    say: Enum.uniq([:out | @synth_keys ++ @player_keys])
+    say: Enum.uniq(@synth_keys ++ @player_keys)
   }
 
   @doc "Validate options for synthesis and playback. Returns the original options."

@@ -1,5 +1,5 @@
 defmodule OpenJTalkTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
 
   @tag :tmp_dir
   test "to_wav_file/2 writes a WAV to the given path", %{tmp_dir: tmp_dir} do
@@ -30,21 +30,9 @@ defmodule OpenJTalkTest do
     assert_raise ArgumentError, ~r/invalid option\(s\) for player/, fn ->
       OpenJTalk.play_wav_binary(<<>>, voice: "/tmp/ignored.htsvoice")
     end
-  end
 
-  @tag :tmp_dir
-  test "say/2 preserves :out while using stdin playback", %{tmp_dir: tmp_dir} do
-    out = Path.join(tmp_dir, "say-output.wav")
-    path = System.get_env("PATH")
-    System.put_env("PATH", "")
-
-    try do
-      assert {:error, :no_player_found} =
-               OpenJTalk.say("保存するテストです。", out: out, playback_mode: :stdin)
-    after
-      if path, do: System.put_env("PATH", path), else: System.delete_env("PATH")
+    assert_raise ArgumentError, ~r/invalid option\(s\) for say/, fn ->
+      OpenJTalk.say("こんにちは", out: "/tmp/ignored.wav")
     end
-
-    assert {:ok, <<"RIFF", _::binary>>} = File.read(out)
   end
 end

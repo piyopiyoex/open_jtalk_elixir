@@ -55,7 +55,9 @@ defmodule OpenJTalk.OptionsTest do
       Options.validate_for!([out: "/tmp/out.wav"], :synth)
     end
 
-    assert Options.validate_for!([out: "/tmp/out.wav", playback_mode: :file], :say)
+    assert_raise ArgumentError, "invalid option(s) for say: [:out]", fn ->
+      Options.validate_for!([out: "/tmp/out.wav"], :say)
+    end
   end
 
   test "validate!/1 rejects non-keyword options" do
