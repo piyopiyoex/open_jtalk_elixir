@@ -59,6 +59,11 @@ For size-constrained firmware, disable bundled assets:
 MIX_TARGET=rpi4 OPENJTALK_BUNDLE_ASSETS=0 mix deps.compile open_jtalk_elixir
 ```
 
+This also keeps the dictionary and MMDAgent example archive out of vendor
+preparation, so the build downloads only the three native source archives.
+For restricted-network or offline builds, pre-populate the verified cache
+described in [Building](building.md#local-cache-and-offline-builds).
+
 Provision the dictionary and voice separately, for example under `/data`, then
 configure their runtime paths:
 

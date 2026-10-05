@@ -33,7 +33,8 @@ jobs:
       - run: mix local.rebar --force
       - run: mix deps.get
       - run: mix format --check-formatted
-      - run: shellcheck -x scripts/*.sh
+      - run: shellcheck -x scripts/*.sh test/scripts/*.sh
+      - run: bash test/scripts/vendor_download_test.sh
       - run: mix compile --warnings-as-errors
       - run: mix dialyzer --format short
       - run: mix credo --all --strict --format=oneline

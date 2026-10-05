@@ -16,7 +16,7 @@ OBJ_VENDOR := $(abspath $(OBJ_DIR)/vendor)
 SCRIPT_DIR := $(abspath $(CURDIR)/scripts)
 VENDOR_DIR := $(abspath $(CURDIR)/vendor)
 
-# Pinned source archives committed in the repo (reproducible builds)
+# Pinned source archives downloaded and verified during the first build
 MECAB_TGZ := $(VENDOR_DIR)/mecab-0.996.tar.gz
 HTS_TGZ   := $(VENDOR_DIR)/hts_engine_API-1.10.tar.gz
 OJT_TGZ   := $(VENDOR_DIR)/open_jtalk-1.11.tar.gz
@@ -95,12 +95,12 @@ CONFIG_SUB ?= $(CURDIR)/vendor/config/config.sub
 # ------------------------------------------------------------------------------
 # Verified vendor readiness check (used as an order-only prerequisite)
 # ------------------------------------------------------------------------------
-VENDOR_PAYLOADS := \
-  $(VENDOR_DIR)/config/config.sub \
-  $(VENDOR_DIR)/config/config.guess \
+NATIVE_VENDOR_PAYLOADS := \
   $(MECAB_TGZ) \
   $(HTS_TGZ) \
-  $(OJT_TGZ) \
+  $(OJT_TGZ)
+
+ASSET_VENDOR_PAYLOADS := \
   $(DIC_TGZ) \
   $(MEI_ZIP)
 
@@ -114,13 +114,24 @@ NATIVE_BUILD_INPUTS := \
   $(HTS_TGZ) \
   $(OJT_TGZ)
 
-.PHONY: vendor_ready
-vendor_ready:
-	@/usr/bin/env bash "$(SCRIPT_DIR)/prepare_vendor.sh"
+.PHONY: vendor_ready vendor_native_ready vendor_assets_ready
+vendor_ready: vendor_native_ready
+ifeq ($(OPENJTALK_BUNDLE_ASSETS),1)
+vendor_ready: vendor_assets_ready
+endif
+
+vendor_native_ready:
+	@/usr/bin/env bash "$(SCRIPT_DIR)/prepare_vendor.sh" native
+
+vendor_assets_ready:
+	@/usr/bin/env bash "$(SCRIPT_DIR)/prepare_vendor.sh" assets
 
 # Missing payloads are created by vendor_ready. Declaring this relationship lets
 # the real build targets use the payloads as ordinary timestamp prerequisites.
-$(VENDOR_PAYLOADS): | vendor_ready
+$(NATIVE_VENDOR_PAYLOADS): | vendor_native_ready
+	@test -f "$@"
+
+$(ASSET_VENDOR_PAYLOADS): | vendor_assets_ready
 	@test -f "$@"
 
 # ------------------------------------------------------------------------------
