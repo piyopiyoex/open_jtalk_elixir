@@ -123,7 +123,8 @@ audio requirements, and external asset configuration.
 
 The project supports Elixir 1.15 and later. Native compilation requires a C/C++
 toolchain, `make`, `curl`, `tar`, and `unzip`. A Hex installation normally
-needs outbound HTTPS access during its first build. See
+needs outbound HTTPS access during its first build, but a pre-populated,
+SHA-256-verified vendor cache supports builds without outbound access. See
 [Building](docs/building.md) for details.
 
 ## Documentation

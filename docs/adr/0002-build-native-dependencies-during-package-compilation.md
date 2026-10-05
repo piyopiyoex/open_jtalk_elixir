@@ -30,9 +30,15 @@ sources and place Autotools-generated files under `_build/.../obj/`, not in the
 repository source tree. Separate native outputs by target triplet and discard
 incompatible intermediate state when the triplet changes.
 
-Do not include the large upstream archives in the Hex package. Download any
-missing archives during the first build and reuse verified local archives and
-build outputs on subsequent builds.
+Do not include the large upstream archives in the Hex package. Resolve missing
+archives from an explicit local cache or one of their configured download URLs,
+and reuse verified local archives and build outputs on subsequent builds. Every
+cached or downloaded candidate must match the pinned SHA-256 digest.
+
+Prepare native sources separately from optional runtime assets. When asset
+bundling is disabled, do not resolve or download the dictionary or voice
+archive. Include the small pinned `config.sub` and `config.guess` compatibility
+files in the package instead of downloading them during the first build.
 
 ## Consequences
 
@@ -45,13 +51,20 @@ build outputs on subsequent builds.
 - Compatibility handling for old Autotools projects stays inside this
   package.
 - Removing `_build` resets generated native state.
+- Ordered download candidates reduce dependence on one hosting service.
+- A pre-populated, verified vendor cache supports builds without outbound
+  network access.
+- Disabling bundled assets also removes their download services from the build
+  path.
 
 ### Costs
 
-- A first build may require a C/C++ toolchain and outbound network access.
+- A fresh build requires a C/C++ toolchain and either a complete local source
+  cache or access to at least one configured source for each required archive.
 - Compilation takes longer than a pure Elixir package.
 - The project must maintain compatibility with old upstream build systems.
-- A first build fails when required download sources are unavailable.
+- A first build fails when neither the cache nor any configured source provides
+  the exact pinned bytes.
 
 ## Constraints
 

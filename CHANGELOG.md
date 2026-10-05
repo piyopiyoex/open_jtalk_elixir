@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Native builds and packaging
+
+- Resolve vendor archives from verified package-local files, an explicit local
+  cache, and ordered download candidates.
+- Add default Debian fallbacks for Open JTalk and HTS Engine and configurable
+  mirror/per-artifact URL lists.
+- Avoid resolving dictionary and voice archives when asset bundling is
+  disabled, and remove GNU Savannah from the first-build download path.
+
 ## v0.4.0
 
 This release tightens runtime contracts, hardens WAV handling and native

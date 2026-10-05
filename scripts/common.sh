@@ -44,31 +44,82 @@ verify_sha256() {
   fi
 }
 
-# Fetch and verify a URL before atomically installing it at the destination.
-# Usage: fetch <url> <dest_path> <sha256> [chmod+x? (true|false)]
+# Resolve an artifact from an existing package-local file, an optional cache,
+# or one of several URLs. Every candidate is verified before it is installed.
+# Usage: fetch <dest_path> <sha256> <chmod+x? (true|false)> [url ...]
 fetch() {
-  local url="$1" dest="$2" expected_sha256="$3" make_x="${4:-false}"
+  local dest="$1" expected_sha256="$2" make_x="${3:-false}"
+  shift 3
+
   if [[ -f "$dest" && "${FORCE:-0}" != "1" ]]; then
-    verify_sha256 "$dest" "$expected_sha256" || die "Refusing to use unverified download"
+    verify_sha256 "$dest" "$expected_sha256" || die "Refusing to use unverified package-local artifact"
     log "exists: $dest"
     return 0
   fi
 
-  log "downloading: $url -> $dest"
   mkdir -p "$(dirname "$dest")"
   local tmp="${dest}.download.$$"
+  local cache_file=""
 
-  # Follow redirects (SF “/download”), fail on HTTP errors, retry a bit for flakiness
-  if ! curl -fL --retry 3 --retry-delay 2 -o "$tmp" "$url"; then
-    rm -f "$tmp"
-    die "Download failed: $url"
+  if [[ -n "${OPENJTALK_VENDOR_CACHE:-}" && "${FORCE:-0}" != "1" ]]; then
+    cache_file="${OPENJTALK_VENDOR_CACHE%/}/$(basename "$dest")"
+    if [[ -f "$cache_file" ]]; then
+      log "using cache: $cache_file -> $dest"
+      if ! cp "$cache_file" "$tmp"; then
+        rm -f "$tmp"
+        die "Could not copy cached artifact: $cache_file"
+      fi
+
+      if ! verify_sha256 "$tmp" "$expected_sha256"; then
+        rm -f "$tmp"
+        die "Refusing to use unverified cached artifact: $cache_file"
+      fi
+
+      mv -f "$tmp" "$dest"
+      if [[ "$make_x" == "true" ]]; then chmod +x "$dest" || true; fi
+      return 0
+    fi
   fi
 
-  if ! verify_sha256 "$tmp" "$expected_sha256"; then
-    rm -f "$tmp"
-    die "Refusing to install unverified download"
+  if (($# > 0)) && ! have curl; then
+    die "Missing tool: curl (or populate OPENJTALK_VENDOR_CACHE)"
   fi
 
-  mv -f "$tmp" "$dest"
-  if [[ "$make_x" == "true" ]]; then chmod +x "$dest" || true; fi
+  local url
+  for url in "$@"; do
+    log "downloading: $url -> $dest"
+
+    # Follow redirects (SF "/download"), fail on HTTP errors, and retry brief
+    # transient failures before moving on to the next configured source.
+    if ! curl -fL --retry 3 --retry-delay 2 -o "$tmp" "$url"; then
+      rm -f "$tmp"
+      log "download failed; trying next source: $url"
+      continue
+    fi
+
+    if ! verify_sha256 "$tmp" "$expected_sha256"; then
+      rm -f "$tmp"
+      log "rejected unverified source; trying next source: $url"
+      continue
+    fi
+
+    mv -f "$tmp" "$dest"
+    if [[ "$make_x" == "true" ]]; then chmod +x "$dest" || true; fi
+    return 0
+  done
+
+  log "ERROR: Failed to obtain $(basename "$dest")."
+  if [[ -n "${OPENJTALK_VENDOR_CACHE:-}" ]]; then
+    log "Checked cache: ${cache_file:-${OPENJTALK_VENDOR_CACHE%/}/$(basename "$dest")}"
+  else
+    log "OPENJTALK_VENDOR_CACHE is not configured."
+  fi
+  if (($# > 0)); then
+    log "Checked download sources:"
+    for url in "$@"; do log "  $url"; done
+  else
+    log "No download sources are configured."
+  fi
+  log "Expected SHA-256: $expected_sha256"
+  die "Retry later or place the expected artifact in OPENJTALK_VENDOR_CACHE"
 }
